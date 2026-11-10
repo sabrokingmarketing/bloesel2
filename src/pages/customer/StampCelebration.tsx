@@ -88,8 +88,11 @@ export function StampCelebration({ event, customer, settings }: { event: StampEv
               : `${left} more cups to your free coffee, ${customer.name.split(' ')[0]}.`}
         </p>
         {event.complete ? (
-          <Link to="/app/rewards" className="btn btn-primary btn-block" onClick={close}>
-            <Icon name="gift" /> See my reward
+          <Link to="/app/rewards" className="btn btn-primary btn-block btn-cta" onClick={close}>
+            See my reward
+            <span className="btn-orb">
+              <Icon name="gift" />
+            </span>
           </Link>
         ) : (
           <button className="btn btn-dark btn-block" onClick={close}>

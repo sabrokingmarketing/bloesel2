@@ -5,7 +5,7 @@
  */
 import type { PGlite } from '@electric-sql/pglite';
 import type { Pool, PoolClient } from 'pg';
-import { isDeployed } from './env';
+import { isDeployed, SetupError } from './env.js';
 
 export type Row = Record<string, unknown>;
 
@@ -79,7 +79,7 @@ async function connect(): Promise<Db> {
     return fromPool(new pg.Pool({ connectionString: url, max: 3, idleTimeoutMillis: 10_000 }));
   }
   if (isDeployed()) {
-    throw new Error('DATABASE_URL is not set. Add a Postgres database (e.g. Neon) to the Vercel project.');
+    throw new SetupError('No database is connected. In Vercel, add Neon from Storage → Marketplace so DATABASE_URL is set, then redeploy.');
   }
   const { PGlite } = await import('@electric-sql/pglite');
   const dir = process.env.PGLITE_DIR ?? '.data/pglite';

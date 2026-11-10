@@ -28,10 +28,10 @@ async function printPoster(c: Campaign) {
 @page{size:A5;margin:0}
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .p{width:148mm;height:210mm;margin:0 auto;padding:14mm 12mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;
-background:radial-gradient(130% 80% at 50% 0%,#ea8ea4,#d9617f 45%,#9a3651);color:#fff}
+background:radial-gradient(130% 80% at 50% 0%,#ff8fd3,#ff66c4 45%,#a8246f);color:#fff}
 .b{font-family:Georgia,serif;font-style:italic;font-size:30px;font-weight:600;letter-spacing:-.5px}.b small{display:block;font-style:normal;font-family:Poppins,sans-serif;font-size:10px;letter-spacing:.42em;text-transform:uppercase;opacity:.85;margin-top:2px}
-h1{font-family:Georgia,serif;font-weight:600;font-size:40px;line-height:1.05;margin:0}h1 em{color:#fae0e6}
-.q{background:#fff;border-radius:28px;padding:16px;box-shadow:0 20px 40px -20px rgba(0,0,0,.4)}.q img{width:78mm;height:78mm;display:block}
+h1{font-family:Georgia,serif;font-weight:600;font-size:40px;line-height:1.05;margin:0}h1 em{color:#ffdcf0}
+.q{background:#fff;border-radius:28px;padding:16px;box-shadow:0 20px 40px -20px rgba(0, 0, 0,.4)}.q img{width:78mm;height:78mm;display:block}
 p{margin:0;font-size:13px;opacity:.9}
 </style></head><body><div class="p"><div class="b">Bloeisel<small>Koffie</small></div><h1>${headline}</h1><div class="q"><img src="${png}"/></div>
 <p>Collect a sticker with every coffee.<br/>Ten stickers and the next cup is on us.</p></div>

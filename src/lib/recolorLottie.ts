@@ -15,8 +15,8 @@ export type ColorMap = Array<[from: string, to: string]>;
 /** Source palette of "Coffee Break" -> Bloeisel brand colours. */
 export const COFFEE_BREAK_BRAND_MAP: ColorMap = [
   ['#092821', '#2e1a16'], // dark green ink outlines -> espresso
-  ['#fc53c3', '#d9617f'], // hot pink -> Bloeisel rose
-  ['#ae9dff', '#f5c7d2'], // lavender sleeves/cup -> blush
+  ['#fc53c3', '#ff66c4'], // hot pink -> Bloeisel rose
+  ['#ae9dff', '#ffc1e5'], // lavender sleeves/cup -> blush
   ['#ddf30a', '#e8b974'], // lime accents -> caramel
   ['#c55852', '#b06a52'], // warm skin -> cocoa-warm skin
   ['#eadcdc', '#f7e8e2'], // pale skin, steam, cup -> latte cream

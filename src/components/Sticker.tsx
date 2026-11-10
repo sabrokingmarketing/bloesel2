@@ -7,9 +7,9 @@ const VARIANTS = ['rose', 'espresso', 'blush', 'rose', 'caramel', 'espresso', 'r
 type Variant = (typeof VARIANTS)[number] | 'reward';
 
 const FILL: Record<Variant, { base: string; deep: string; icon: string }> = {
-  rose: { base: '#e06f8b', deep: '#c04a69', icon: '#fff6f3' },
-  espresso: { base: '#56332a', deep: '#2e1a16', icon: '#f5c7d2' },
-  blush: { base: '#f8d3dc', deep: '#eeaebf', icon: '#7a2c43' },
+  rose: { base: '#ff70c8', deep: '#d42f8f', icon: '#fff6f3' },
+  espresso: { base: '#56332a', deep: '#2e1a16', icon: '#ffc1e5' },
+  blush: { base: '#ffd1ec', deep: '#ffb0de', icon: '#8c1f5e' },
   caramel: { base: '#f0c584', deep: '#d49a4c', icon: '#3e241e' },
   reward: { base: '#f4d08f', deep: '#c98c3d', icon: '#3e241e' },
 };

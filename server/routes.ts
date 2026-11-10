@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Activity, Campaign, Customer, Settings } from '../src/data/types';
-import { getDb, type Db, type Queryable, type Row } from './db';
+import { getDb, type Db, type Queryable, type Row } from './db.js';
 import {
   badRequest,
   body,
@@ -15,8 +15,8 @@ import {
   tooMany,
   unauthorized,
   type Ctx,
-} from './http';
-import { ensureSchema } from './schema';
+} from './http.js';
+import { ensureSchema } from './schema.js';
 import {
   clearRateLimit,
   hashPin,
@@ -29,7 +29,7 @@ import {
   STAFF_COOKIE,
   verifyPin,
   verifyStaffSession,
-} from './security';
+} from './security.js';
 
 /* ======================= Row mapping ======================= */
 

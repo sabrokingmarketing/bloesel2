@@ -6,3 +6,6 @@
 export function isDeployed() {
   return !!process.env.VERCEL || process.env.BLOEISEL_DEPLOYED === '1';
 }
+
+/** A deployment setting is missing. Reported to the client as 503 setup_required, with the fix. */
+export class SetupError extends Error {}

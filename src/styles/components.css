@@ -1,54 +1,28 @@
-/* ---------- Logo ---------- */
+/* ---------- Logo (script wordmark, sized by height) ---------- */
 .logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--espresso-900);
+  display: block;
+  width: auto;
+  height: 40px;
+  flex: none;
+  overflow: visible;
 }
-.logo-words {
-  display: grid;
-  line-height: 1;
+.logo-sm {
+  height: 30px;
 }
-.logo-name {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-style: italic;
-  font-variation-settings: 'SOFT' 100, 'WONK' 1;
-  letter-spacing: -0.02em;
-  font-size: 22px;
+.logo-lg {
+  height: 64px;
 }
-.logo-sub {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.42em;
-  text-transform: uppercase;
-  margin-top: 3px;
-  padding-left: 1px;
-  color: var(--rose-600);
+.logo-xl {
+  height: 96px;
 }
-.logo-sm .logo-name {
-  font-size: 19px;
-}
-.logo-sm .logo-sub {
-  font-size: 8px;
-}
-.logo-lg .logo-name {
-  font-size: 36px;
-}
-.logo-lg .logo-sub {
-  font-size: 12px;
-  margin-top: 6px;
-}
-.logo-stacked {
-  flex-direction: column;
-  gap: 14px;
-  text-align: center;
+.logo-brand {
+  color: var(--logo-pink);
 }
 .logo-light {
   color: #fff;
 }
-.logo-light .logo-sub {
-  color: var(--blush-100);
+.logo-dark {
+  color: var(--espresso-900);
 }
 
 /* ---------- Sticker ---------- */
@@ -208,8 +182,8 @@
   justify-content: space-between;
   gap: var(--s-3);
   padding: 18px 20px;
-  background: linear-gradient(120deg, var(--rose-500) 0%, var(--rose-400) 55%, #ea93a8 100%);
-  color: #fff;
+  background: linear-gradient(120deg, var(--rose-500) 0%, var(--rose-400) 55%, #ff8fd3 100%);
+  color: var(--on-pink);
   overflow: hidden;
 }
 .lc-pattern {

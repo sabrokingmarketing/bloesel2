@@ -57,7 +57,8 @@ async function api<T>(method: string, path: string, body?: unknown, opts: { devi
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    /* non-JSON error page */
+    // An HTML page instead of JSON means the request never reached the API (e.g. a routing problem).
+    if (res.ok) throw new ApiError(502, 'bad_response', "Bloeisel's server sent an unexpected reply. Please try again shortly.");
   }
   if (!res.ok) {
     const e = (data as { error?: { code: string; message: string } })?.error;

@@ -51,7 +51,7 @@ export function AdminLogin() {
   return (
     <div className="ad-login">
       <section className="ad-login-art">
-        <Logo tone="light" />
+        <Logo size="lg" />
         <div className="ad-login-lottie">
           <CoffeeBreak />
         </div>

@@ -41,7 +41,7 @@ export function QRPage() {
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
     const prev = meta?.getAttribute('content');
-    meta?.setAttribute('content', '#d9617f');
+    meta?.setAttribute('content', '#ff66c4');
     return () => {
       if (prev) meta?.setAttribute('content', prev);
     };

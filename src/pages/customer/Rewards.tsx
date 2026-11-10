@@ -79,8 +79,11 @@ export function Rewards() {
               <p className="muted">
                 You have {have} of {max} stickers. Keep collecting and your {max}th coffee is free.
               </p>
-              <Link to="/app/qr" className="btn btn-primary">
-                <Icon name="qr" /> Collect a sticker
+              <Link to="/app/qr" className="btn btn-primary btn-lg btn-cta">
+                Collect a sticker
+                <span className="btn-orb">
+                  <Icon name="qr" />
+                </span>
               </Link>
             </div>
           </section>

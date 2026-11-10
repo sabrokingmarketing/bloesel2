@@ -32,9 +32,11 @@ export function Home() {
             My loyalty card
           </h2>
           <LoyaltyCard customer={customer} settings={settings} newIndex={newIndex} />
-          <Link to={complete ? '/app/rewards' : '/app/qr'} className={`btn btn-lg btn-block cx-card-cta ${complete ? 'btn-dark' : 'btn-primary'}`}>
-            <Icon name={complete ? 'gift' : 'qr'} />
+          <Link to={complete ? '/app/rewards' : '/app/qr'} className={`btn btn-lg btn-block btn-cta cx-card-cta ${complete ? 'btn-dark' : 'btn-primary'}`}>
             {complete ? 'Claim my free coffee' : 'Show my QR to collect'}
+            <span className="btn-orb">
+              <Icon name={complete ? 'gift' : 'qr'} />
+            </span>
           </Link>
         </section>
 

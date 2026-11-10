@@ -4,7 +4,7 @@
 .ad {
   --side-w: 256px;
   min-height: 100dvh;
-  background: linear-gradient(180deg, #f8ece6 0%, var(--cream) 320px);
+  background: linear-gradient(180deg, #fff0f8 0%, var(--cream) 320px);
 }
 .ad.is-collapsed {
   --side-w: 88px;
@@ -18,7 +18,7 @@
   flex-direction: column;
   gap: var(--s-6);
   padding: calc(var(--s-6) + var(--safe-top)) var(--s-4) var(--s-5);
-  background: linear-gradient(180deg, #f3dcd6 0%, #efd3cc 100%);
+  background: linear-gradient(180deg, #ffe7f5 0%, #ffd9ef 100%);
   transform: translateX(-104%);
   transition: transform var(--dur-slow) var(--ease-out), width var(--dur) var(--ease-out);
   overflow-y: auto;
@@ -68,8 +68,8 @@
   background: rgba(255, 252, 250, 0.55);
 }
 .ad-nav-link.active {
-  background: linear-gradient(120deg, var(--rose-500), var(--rose-600));
-  color: #fff;
+  background: linear-gradient(120deg, var(--rose-500), #f24fb4);
+  color: var(--on-pink);
   box-shadow: var(--shadow-rose);
 }
 .ad-nav-badge {
@@ -106,7 +106,20 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(217, 97, 127, 0.45), transparent 70%);
+  background: radial-gradient(circle, rgba(255, 102, 196, 0.45), transparent 70%);
+}
+.ad-side-promo-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--rose-500);
+  color: var(--on-pink);
+}
+.ad-side-promo-icon svg {
+  width: 20px;
+  height: 20px;
 }
 .ad-side-promo p {
   display: grid;
@@ -156,7 +169,7 @@
   align-items: center;
   gap: var(--s-3);
   padding: calc(var(--s-3) + var(--safe-top)) var(--s-4) var(--s-3);
-  background: rgba(248, 236, 230, 0.82);
+  background: rgba(255, 240, 248, 0.82);
   backdrop-filter: saturate(1.4) blur(14px);
   -webkit-backdrop-filter: saturate(1.4) blur(14px);
 }
@@ -227,9 +240,9 @@
   width: 60px;
   height: 60px;
   border-radius: 20px;
-  background: linear-gradient(145deg, var(--rose-400), var(--rose-600));
-  color: #fff;
-  box-shadow: 0 14px 30px -10px rgba(191, 72, 103, 0.8);
+  background: linear-gradient(145deg, var(--rose-400), #f24fb4);
+  color: var(--on-pink);
+  box-shadow: 0 14px 30px -10px rgba(212, 47, 143, 0.8);
 }
 .ad-fab svg {
   width: 26px;
@@ -454,7 +467,7 @@
     left: 15%;
     top: 18%;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(217, 97, 127, 0.35), transparent 65%);
+    background: radial-gradient(circle, rgba(255, 102, 196, 0.35), transparent 65%);
   }
   .ad-login-lottie {
     position: relative;
@@ -627,7 +640,7 @@
   border-radius: 50%;
   background: var(--rose-500);
   border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(191, 72, 103, 0.5);
+  box-shadow: 0 2px 6px rgba(212, 47, 143, 0.5);
   pointer-events: none;
   transition: left 120ms linear, top 120ms linear;
 }
@@ -881,7 +894,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(245, 199, 210, 0.6);
+  background: rgba(255, 193, 229, 0.6);
   animation: fade-out 500ms forwards;
 }
 @keyframes fade-out {
@@ -1296,11 +1309,11 @@
 .fchip.on {
   background: var(--rose-500);
   border-color: var(--rose-500);
-  color: #fff;
+  color: var(--on-pink);
 }
 .fchip.on em {
   background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  color: var(--on-pink);
 }
 .customers-card {
   padding: var(--s-2) var(--s-5);
@@ -1516,8 +1529,8 @@
   gap: var(--s-6);
   padding: var(--s-6);
   border-radius: var(--r-xl);
-  background: radial-gradient(120% 120% at 0% 0%, #ea8ea4 0%, var(--rose-500) 45%, var(--rose-700) 100%);
-  color: #fff;
+  background: radial-gradient(120% 120% at 0% 0%, #ff8fd3 0%, var(--rose-500) 45%, #f24fb4 100%);
+  color: var(--on-pink);
   overflow: hidden;
   isolation: isolate;
 }
@@ -1540,7 +1553,7 @@
 }
 .qrm-chip {
   background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: var(--on-pink);
 }
 .qrm-hero h2 {
   font-size: clamp(1.8rem, 5vw, 2.6rem);
@@ -1571,9 +1584,9 @@
   gap: var(--s-3);
 }
 .qrm-ghost {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--on-pink);
+  border-color: rgba(31, 18, 16, 0.18);
 }
 .qrm-ghost:hover {
   background: rgba(255, 255, 255, 0.24);
@@ -1593,8 +1606,8 @@
   gap: var(--s-4);
   padding: var(--s-6) var(--s-5);
   border-radius: 26px;
-  background: linear-gradient(180deg, var(--rose-400), var(--rose-600));
-  box-shadow: 0 30px 60px -24px rgba(60, 10, 25, 0.7), 0 0 0 8px rgba(255, 255, 255, 0.92);
+  background: linear-gradient(180deg, var(--rose-400), #f24fb4);
+  box-shadow: 0 30px 60px -24px rgba(80, 10, 50, 0.7), 0 0 0 8px rgba(255, 255, 255, 0.92);
   text-align: center;
 }
 .qrm-poster-inner p {
@@ -1732,7 +1745,7 @@
   height: 52px;
   border-radius: 16px;
   background: var(--rose-500);
-  color: #fff;
+  color: var(--on-pink);
   box-shadow: var(--shadow-rose);
   margin-bottom: 6px;
 }
@@ -1890,7 +1903,7 @@
   place-items: center;
   background: var(--rose-500);
   border-color: var(--rose-500);
-  color: #fff;
+  color: var(--on-pink);
   box-shadow: var(--shadow-rose);
 }
 .pin-pad button.is-go:disabled {
@@ -1910,4 +1923,8 @@
   .ad-offline {
     margin: 0 var(--s-8) var(--s-3);
   }
+}
+.ad.is-collapsed .ad-side-brand .logo {
+  width: 58px;
+  height: auto;
 }

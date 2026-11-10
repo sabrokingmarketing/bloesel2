@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { handle } from './routes';
+import { handle } from './routes.js';
 
 /** Connect-style middleware so the Vite dev/preview server answers /api and /q like Vercel does. */
 export async function nodeMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {

@@ -1,4 +1,4 @@
-import { isDeployed } from './env';
+import { isDeployed, SetupError } from './env.js';
 import { randomUUID } from 'node:crypto';
 import { ZodError, type ZodType } from 'zod';
 
@@ -87,6 +87,10 @@ export function newCtx(req: Request, params: Record<string, string> = {}): Ctx {
 /** Converts thrown errors into safe JSON responses; never leaks internals. */
 export function errorResponse(err: unknown, ctx: Ctx) {
   if (err instanceof HttpError) return json({ error: { code: err.code, message: err.message } }, err.status);
+  if (err instanceof SetupError) {
+    console.error(JSON.stringify({ level: 'error', requestId: ctx.requestId, path: ctx.url.pathname, msg: err.message }));
+    return json({ error: { code: 'setup_required', message: `The loyalty server isn't set up yet. ${err.message}` } }, 503);
+  }
   if (err instanceof ZodError) {
     const first = err.issues[0];
     return json({ error: { code: 'invalid', message: first ? `${first.path.join('.') || 'body'}: ${first.message}` : 'Invalid request' } }, 400);

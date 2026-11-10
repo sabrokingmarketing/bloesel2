@@ -1,7 +1,7 @@
-import { isDeployed } from './env';
+import { isDeployed, SetupError } from './env.js';
 import { createHash, createHmac, randomBytes, randomInt, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import type { Queryable } from './db';
+import type { Queryable } from './db.js';
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
@@ -41,7 +41,7 @@ function sessionSecret() {
   const s = process.env.SESSION_SECRET;
   if (s && s.length >= 32) return s;
   if (isDeployed()) {
-    throw new Error('SESSION_SECRET must be set (32+ random characters) to sign staff sessions.');
+    throw new SetupError('SESSION_SECRET is not set. In Vercel, add it under Settings → Environment Variables (32+ random characters), then redeploy.');
   }
   return 'dev-only-session-secret-change-me-0000000000';
 }

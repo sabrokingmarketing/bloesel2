@@ -63,11 +63,11 @@ export function AreaChart({ data, height = 260, unit = 'stickers' }: { data: Poi
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Chart of ${unit}, peak ${data[peak]?.value} at ${data[peak]?.full}`}>
         <defs>
           <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d9617f" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#d9617f" stopOpacity="0" />
+            <stop offset="0%" stopColor="#ff66c4" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#ff66c4" stopOpacity="0" />
           </linearGradient>
           <filter id={`${id}-glow`} x="-10%" y="-30%" width="120%" height="160%">
-            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#bf4867" floodOpacity="0.25" />
+            <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#d42f8f" floodOpacity="0.25" />
           </filter>
         </defs>
         {ticks.map((t) => {

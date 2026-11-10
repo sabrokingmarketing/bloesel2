@@ -109,8 +109,11 @@ export function Join() {
                   </span>
                   <span>Send me the odd treat and new-menu news. No spam, promise.</span>
                 </label>
-                <button className="btn btn-primary btn-lg btn-block" disabled={busy}>
-                  {busy ? 'Creating your card…' : 'Create my card'} <Icon name="arrowRight" />
+                <button className="btn btn-primary btn-lg btn-block btn-cta" disabled={busy}>
+                  {busy ? 'Creating your card…' : 'Create my card'}
+                  <span className="btn-orb">
+                    <Icon name="arrowRight" />
+                  </span>
                 </button>
               </form>
             </>

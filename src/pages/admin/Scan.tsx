@@ -333,8 +333,11 @@ export function Scan() {
                     </button>
                   ))}
                 </div>
-                <button className="btn btn-primary btn-lg btn-block scan-stamp" onClick={stamp} disabled={acting}>
-                  <Icon name="plus" /> Add sticker · {drink}
+                <button className="btn btn-primary btn-lg btn-block btn-cta scan-stamp" onClick={stamp} disabled={acting}>
+                  Add sticker · {drink}
+                  <span className="btn-orb">
+                    <Icon name="plus" />
+                  </span>
                 </button>
               </>
             )}

@@ -1,11 +1,11 @@
-import { isDeployed } from './env';
+import { isDeployed, SetupError } from './env.js';
 /**
  * Schema migrations. Append-only: never edit a migration once it has shipped,
  * add a new one. Applied automatically on first request under an advisory lock,
  * so concurrent cold starts can't race each other.
  */
-import type { Db } from './db';
-import { hashPin } from './security';
+import type { Db } from './db.js';
+import { hashPin } from './security.js';
 
 const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
   {
@@ -125,7 +125,7 @@ async function migrate(db: Db) {
     if (!hasSettings) {
       const pin = process.env.ADMIN_PIN;
       const isProd = isDeployed();
-      if (!pin && isProd) throw new Error('ADMIN_PIN must be set for the first deploy so the staff portal is not left on a default PIN.');
+      if (!pin && isProd) throw new SetupError('ADMIN_PIN is not set. In Vercel, add it under Settings → Environment Variables (4 to 8 digits), then redeploy.');
       await q.query(
         `INSERT INTO settings (id, store_name, stamps_required, reward_name, admin_pin_hash)
          VALUES (1, 'Bloeisel Koffie', 10, 'Any coffee, on us', $1)`,

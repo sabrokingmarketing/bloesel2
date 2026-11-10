@@ -2,7 +2,7 @@
  * Vercel Function: every /api/* and /q/* request is rewritten here (see vercel.json)
  * with the original path in `__path`.
  */
-import { handle } from '../server/routes';
+import { handle } from '../server/routes.js';
 
 async function entry(request: Request) {
   const url = new URL(request.url);

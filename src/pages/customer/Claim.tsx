@@ -41,8 +41,11 @@ export function Claim() {
           <h1 className="display">That link didn't work</h1>
           <p className="muted">{error}</p>
           <p className="muted">Links work once and expire after 15 minutes. Your barista can make a new one at the counter.</p>
-          <Link to="/app/join" className="btn btn-primary btn-block">
+          <Link to="/app/join" className="btn btn-primary btn-block btn-cta">
             Back to Bloeisel
+            <span className="btn-orb">
+              <Icon name="arrowRight" />
+            </span>
           </Link>
         </div>
       ) : (

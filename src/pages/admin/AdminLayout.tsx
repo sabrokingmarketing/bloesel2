@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from '../../components/Icon';
-import { BlossomMark, Logo } from '../../components/Logo';
+import { Logo } from '../../components/Logo';
 import { adminSignOut, useAdmin, useAdminDB } from '../../data/store';
 import { initials } from '../../lib/format';
 
@@ -58,7 +58,7 @@ export function AdminLayout() {
       <aside className={`ad-side ${drawer ? 'is-open' : ''}`} aria-label="Staff navigation">
         <div className="ad-side-brand">
           <Link to="/admin" className="ad-side-logo">
-            {collapsed ? <BlossomMark size={34} /> : <Logo />}
+            <Logo size={collapsed ? 'sm' : 'md'} />
           </Link>
           <button className="icon-btn ghost ad-drawer-close" onClick={() => setDrawer(false)} aria-label="Close menu">
             <Icon name="close" />
@@ -74,7 +74,9 @@ export function AdminLayout() {
           ))}
         </nav>
         <div className="ad-side-promo">
-          <BlossomMark size={30} />
+          <span className="ad-side-promo-icon">
+            <Icon name="card" />
+          </span>
           <p>
             <strong>Open the customer card</strong>
             <span>See exactly what members see.</span>
