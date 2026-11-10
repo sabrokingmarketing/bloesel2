@@ -211,7 +211,7 @@
   margin-top: -26px;
   border-radius: 20px;
   background: linear-gradient(145deg, var(--rose-400), #f24fb4);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
   box-shadow: 0 12px 24px -8px rgba(255, 102, 196, 0.8), 0 0 0 5px rgba(46, 26, 22, 0.94), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: transform var(--dur) var(--ease-spring);
 }
@@ -807,7 +807,7 @@
   height: 52px;
   border-radius: 16px;
   background: var(--rose-500);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
 }
 .member-pass-icon svg {
   width: 26px;
@@ -932,7 +932,7 @@
 .check input:checked + .check-box {
   background: var(--rose-500);
   border-color: var(--rose-500);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
 }
 .check input:focus-visible + .check-box {
   outline: 2px solid var(--rose-500);
