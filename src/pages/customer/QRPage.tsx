@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { BrandQR } from '../../components/BrandQR';
 import { useToast } from '../../components/Feedback';
@@ -37,6 +37,7 @@ export function QRPage() {
   const event = useStampWatcher(customer, settings);
   const [copied, setCopied] = useState(false);
   useWakeLock();
+  const openedForReward = useRef(false);
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -52,6 +53,10 @@ export function QRPage() {
 
   const max = settings.stampsRequired;
   const complete = customer.stamps >= max;
+  // Stickers come from the counter QR now; this screen is only for claiming a free coffee.
+  // Once open for a reward it stays, so the "redeemed" celebration can play after the barista scans.
+  if (complete) openedForReward.current = true;
+  if (!openedForReward.current) return <Navigate to="/app/rewards" replace />;
 
   const copy = async () => {
     try {
@@ -143,7 +148,7 @@ export function QRPage() {
           </Link>
           <p className="qr-live" role="status">
             <span className={`qr-live-dot ${me.offline ? 'is-off' : ''}`} />
-            {me.offline ? 'Offline. Your card will update when you reconnect.' : 'Live. Your card updates the moment it is stamped.'}
+            {me.offline ? 'Offline. Your card will update when you reconnect.' : 'Live. Updates the moment your barista redeems it.'}
           </p>
         </div>
       </main>

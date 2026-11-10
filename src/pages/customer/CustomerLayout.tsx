@@ -63,9 +63,6 @@ export function CustomerLayout() {
             ))}
           </nav>
           <div className="cx-top-actions">
-            <Link to="/app/qr" className="btn btn-primary btn-sm cx-top-qr">
-              <Icon name="qr" /> My QR
-            </Link>
             <Link to="/app/profile" className="avatar cx-avatar" aria-label="Profile">
               {initials(customer.name)}
             </Link>
@@ -83,20 +80,8 @@ export function CustomerLayout() {
       </main>
 
       <nav className="cx-tabbar" aria-label="Main">
-        {NAV.slice(0, 2).map((n) => (
+        {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} className="cx-tab">
-            <Icon name={n.icon} />
-            <span>{n.label}</span>
-          </NavLink>
-        ))}
-        <Link to="/app/qr" className="cx-tab-qr" aria-label="Show my QR code">
-          <span className="cx-tab-qr-btn">
-            <Icon name="qr" />
-          </span>
-          <span>Scan</span>
-        </Link>
-        {NAV.slice(2).map((n) => (
-          <NavLink key={n.to} to={n.to} className="cx-tab">
             <Icon name={n.icon} />
             <span>{n.label}</span>
           </NavLink>

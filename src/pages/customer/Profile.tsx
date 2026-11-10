@@ -59,15 +59,15 @@ export function Profile() {
       </header>
 
       <div className="profile-grid">
-        <Link to="/app/qr" className="member-pass rise rise-1">
+        <div className="member-pass rise rise-1">
           <div>
             <span className="eyebrow">Member code</span>
             <strong className="tabular">{customer.code}</strong>
           </div>
           <span className="member-pass-icon">
-            <Icon name="qr" />
+            <Icon name="card" />
           </span>
-        </Link>
+        </div>
 
         <form className="card card-pad profile-form rise rise-2" onSubmit={save}>
           <h2 className="card-title">Your details</h2>
