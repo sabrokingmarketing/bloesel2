@@ -32,6 +32,18 @@ export function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+/** The secret in the printed counter QR: 120 random bits, URL-safe. */
+export function newCounterCode() {
+  return randomBytes(15).toString('base64url');
+}
+
+/** Constant-time string comparison. */
+export function safeEqual(a: string, b: string) {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
 /* ---------- Staff session cookie ---------- */
 
 export const STAFF_COOKIE = 'bk_staff';

@@ -4,6 +4,7 @@ import { Landing } from './pages/Landing';
 import { CustomerLayout } from './pages/customer/CustomerLayout';
 import { Join } from './pages/customer/Join';
 import { Claim } from './pages/customer/Claim';
+import { CounterStamp } from './pages/customer/CounterStamp';
 import { Home } from './pages/customer/Home';
 import { QRPage } from './pages/customer/QRPage';
 import { Rewards } from './pages/customer/Rewards';
@@ -19,6 +20,7 @@ export function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/app/join" element={<Join />} />
       <Route path="/app/claim" element={<Claim />} />
+      <Route path="/app/stamp" element={<CounterStamp />} />
       <Route path="/app/qr" element={<QRPage />} />
       <Route path="/app" element={<CustomerLayout />}>
         <Route index element={<Home />} />

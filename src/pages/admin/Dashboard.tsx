@@ -143,7 +143,7 @@ export function Dashboard() {
                       <td>
                         {a.type === 'stamp' && (
                           <span className="chip">
-                            <Icon name="plus" /> {a.drink ?? 'Sticker'}
+                            <Icon name={a.note === 'Counter QR' ? 'qr' : 'plus'} /> {a.note === 'Counter QR' ? 'Counter QR' : a.drink ?? 'Sticker'}
                           </span>
                         )}
                         {a.type === 'redeem' && (

@@ -69,7 +69,7 @@
 }
 .ad-nav-link.active {
   background: linear-gradient(120deg, var(--rose-500), #f24fb4);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
   box-shadow: var(--shadow-rose);
 }
 .ad-nav-badge {
@@ -115,7 +115,7 @@
   height: 36px;
   border-radius: 12px;
   background: var(--rose-500);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
 }
 .ad-side-promo-icon svg {
   width: 20px;
@@ -241,7 +241,7 @@
   height: 60px;
   border-radius: 20px;
   background: linear-gradient(145deg, var(--rose-400), #f24fb4);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
   box-shadow: 0 14px 30px -10px rgba(212, 47, 143, 0.8);
 }
 .ad-fab svg {
@@ -1307,13 +1307,13 @@
   color: var(--ink-soft);
 }
 .fchip.on {
-  background: var(--rose-500);
+  background: linear-gradient(180deg, #ff78cb 0%, var(--rose-500) 42%, #ea44ab 100%);
   border-color: var(--rose-500);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
 }
 .fchip.on em {
   background: rgba(255, 255, 255, 0.22);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
 }
 .customers-card {
   padding: var(--s-2) var(--s-5);
@@ -1584,12 +1584,12 @@
   gap: var(--s-3);
 }
 .qrm-ghost {
-  background: rgba(255, 255, 255, 0.3);
-  color: var(--on-pink);
-  border-color: rgba(31, 18, 16, 0.18);
+  background: rgba(140, 31, 94, 0.2);
+  color: var(--on-pink-button);
+  border-color: rgba(255, 255, 255, 0.55);
 }
 .qrm-ghost:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(140, 31, 94, 0.3);
 }
 .qrm-poster {
   justify-self: center;
@@ -1745,7 +1745,7 @@
   height: 52px;
   border-radius: 16px;
   background: var(--rose-500);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
   box-shadow: var(--shadow-rose);
   margin-bottom: 6px;
 }
@@ -1903,7 +1903,7 @@
   place-items: center;
   background: var(--rose-500);
   border-color: var(--rose-500);
-  color: var(--on-pink);
+  color: var(--on-pink-button);
   box-shadow: var(--shadow-rose);
 }
 .pin-pad button.is-go:disabled {
@@ -1927,4 +1927,77 @@
 .ad.is-collapsed .ad-side-brand .logo {
   width: 58px;
   height: auto;
+}
+
+/* White labels on pink controls get the same soft edge as the primary button. */
+.ad-nav-link.active,
+.fchip.on,
+.qrm-ghost {
+  text-shadow: 0 1px 2px rgba(140, 31, 94, 0.45);
+}
+
+/* ---------- Counter sticker QR ---------- */
+.counter-panel {
+  display: grid;
+  overflow: hidden;
+}
+.counter-panel-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
+  background: linear-gradient(150deg, var(--blush-100), var(--blush-200));
+}
+.counter-panel-art svg {
+  width: min(220px, 100%);
+  height: auto;
+  border-radius: 18px;
+  padding: 10px;
+  background: #fff;
+  box-shadow: var(--shadow-md);
+}
+.counter-panel.is-off .counter-panel-art svg {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+.counter-panel-body {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  align-content: center;
+}
+.counter-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.counter-panel-title {
+  margin-top: var(--s-2);
+  font-size: var(--fs-24);
+}
+.counter-panel-field {
+  max-width: 420px;
+}
+.counter-panel-field .field-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.counter-panel-field .field-hint svg {
+  flex: none;
+  margin-top: 2px;
+}
+.counter-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+@media (min-width: 900px) {
+  .counter-panel {
+    grid-template-columns: 300px 1fr;
+  }
+  .counter-panel-body {
+    padding: var(--s-6) var(--s-8);
+  }
 }

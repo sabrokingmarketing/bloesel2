@@ -21,6 +21,7 @@ Locally there's nothing to install: the API uses [PGlite](https://pglite.dev), a
 | `/app` | Customer card, rewards, visit history, profile |
 | `/app/qr` | Full-screen pink QR for the barista; updates live |
 | `/app/claim#…` | One-time link that moves a card onto this phone |
+| `/app/stamp#c=…` | Opened by the counter sticker QR: adds one sticker to this phone's card |
 | `/admin` | Staff portal (PIN) |
 | `/q/<id>` | Printed campaign QR codes: counts the scan, then redirects |
 
@@ -47,6 +48,10 @@ The deployed app refuses to start without a real database, session secret and ad
 - **Moving a card** uses a one-time link that expires after 15 minutes. The member makes one in **Profile → Move to a new phone**, or a barista makes one at the till (**Customers → Send card to a new phone**). Using the link signs every other phone out, so a lost phone stops working.
 - **Staff** sign in with the shop PIN (scrypt-hashed) and get a signed, HttpOnly, SameSite=Strict cookie for 12 hours. Five wrong PINs from one network locks it for 15 minutes. Changing the PIN signs out every other till.
 - **Till actions** carry an idempotency key, and the card row is locked while it changes. A double tap or a retried request on a bad connection can't add two stickers, and two tills can't race.
+
+### Counter sticker QR
+
+Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. Redeeming the free coffee still happens at the till.
 
 ### Limits worth knowing
 

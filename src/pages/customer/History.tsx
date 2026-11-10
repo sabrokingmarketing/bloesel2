@@ -6,7 +6,7 @@ import { useCustomerCtx } from './CustomerLayout';
 function label(a: Activity) {
   switch (a.type) {
     case 'stamp':
-      return { title: a.drink ?? 'Coffee', sub: '+1 sticker' };
+      return { title: a.drink ?? 'Coffee', sub: a.note === 'Counter QR' ? '+1 sticker · scanned at the counter' : '+1 sticker' };
     case 'redeem':
       return { title: 'Free coffee', sub: 'Reward redeemed' };
     case 'adjust':

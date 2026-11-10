@@ -224,3 +224,62 @@ describe('printed QR codes', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('counter QR (customer scans to collect a sticker)', () => {
+  const counter = async (cookie: string) => (await call('GET', '/api/admin/snapshot', { cookie })).data.counter as { code: string; enabled: boolean; cooldownMinutes: number };
+  const scan = (token: string, code: string, key = `scan-${Math.random()}`) =>
+    call('POST', '/api/me/counter-stamp', { token, body: { code, idempotencyKey: key } });
+
+  it('gives one sticker per visit, then makes the customer wait', async () => {
+    const cookie = await staff();
+    const { code, cooldownMinutes } = await counter(cookie);
+    expect(cooldownMinutes).toBe(180);
+    const { token } = await join();
+    const first = await scan(token, code);
+    expect(first.status).toBe(200);
+    expect(first.data.customer.stamps).toBe(1);
+    const again = await scan(token, code);
+    expect(again.status).toBe(429);
+    expect(again.data.error.code).toBe('too_soon');
+    const me = await call('GET', '/api/me', { token });
+    expect(me.data.customer.stamps).toBe(1);
+    expect(me.data.activity[0].note).toBe('Counter QR');
+  });
+
+  it('rejects a wrong or replaced code', async () => {
+    const cookie = await staff();
+    const old = (await counter(cookie)).code;
+    const { token } = await join();
+    expect((await scan(token, 'not-the-real-code-123')).status).toBe(403);
+    await call('PATCH', '/api/admin/counter', { cookie, body: { replaceCode: true } });
+    const res = await scan(token, old);
+    expect(res.status).toBe(403);
+    expect(res.data.error.code).toBe('bad_code');
+    expect((await scan(token, (await counter(cookie)).code)).status).toBe(200);
+  });
+
+  it('needs a card on the phone, and staff can switch it off', async () => {
+    const cookie = await staff();
+    const { code } = await counter(cookie);
+    expect((await call('POST', '/api/me/counter-stamp', { body: { code, idempotencyKey: 'no-card-0001' } })).status).toBe(401);
+    await call('PATCH', '/api/admin/counter', { cookie, body: { enabled: false } });
+    const { token } = await join();
+    expect((await scan(token, code)).data.error.code).toBe('self_scan_off');
+  });
+
+  it('with no time limit, still stops at a full card', async () => {
+    const cookie = await staff();
+    await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 0 } });
+    const { code } = await counter(cookie);
+    const { token } = await join();
+    for (let i = 0; i < 10; i++) expect((await scan(token, code)).status).toBe(200);
+    const full = await scan(token, code);
+    expect(full.status).toBe(409);
+    expect(full.data.error.code).toBe('card_full');
+  });
+
+  it('customers cannot change the counter settings', async () => {
+    const { token } = await join();
+    expect((await call('PATCH', '/api/admin/counter', { token, body: { cooldownMinutes: 0 } })).status).toBe(401);
+  });
+});

@@ -55,8 +55,10 @@
   --primary: var(--rose-500);
   --primary-strong: var(--rose-600);
   --primary-soft: var(--blush-100);
-  /* Dark text on #FF66C4 reads at ~6.4:1; white would be ~2.6:1, too faint at a sunny till. */
-  --on-primary: var(--espresso-950);
+  /* Pink buttons carry white labels (with a soft shadow for legibility);
+     body text on pink surfaces stays dark. */
+  --on-primary: #fff;
+  --on-pink-button: #fff;
   --on-pink: var(--espresso-950);
   --success: #4f8a63;
   --success-soft: #e3f0e6;

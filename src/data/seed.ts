@@ -72,7 +72,7 @@ function pickHour(rand: () => number) {
 
 export const DEMO_CUSTOMER_ID = 'cus_demo_lerato';
 
-export function createSeed(now = new Date()): DB {
+export function createSeed(now = new Date()): Omit<DB, 'counter'> {
   const rand = mulberry32(20261110);
   const customers: Customer[] = [];
   const activity: Activity[] = [];
