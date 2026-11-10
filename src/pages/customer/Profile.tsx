@@ -1,10 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useToast } from '../../components/Feedback';
+import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
-import { findByPhone, phoneKey, signOut, updateProfile } from '../../data/store';
+import { TransferSheet, type Transfer } from '../../components/TransferSheet';
+import { removeCardFromDevice, requestTransfer, updateProfile, type ApiError } from '../../data/store';
 import { initials, shortDate } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
+
+const validPhone = (p: string) => {
+  const d = p.replace(/\D/g, '');
+  return d.length >= 9 && d.length <= 15;
+};
 
 export function Profile() {
   const { customer } = useCustomerCtx();
@@ -13,16 +19,33 @@ export function Profile() {
   const [name, setName] = useState(customer.name);
   const [phone, setPhone] = useState(customer.phone);
   const [email, setEmail] = useState(customer.email ?? '');
+  const [busy, setBusy] = useState(false);
+  const [transfer, setTransfer] = useState<Transfer | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const dirty = name !== customer.name || phone !== customer.phone || email !== (customer.email ?? '');
 
-  const save = (e: FormEvent) => {
+  const save = async (e: FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return toast('Please add your name', 'info');
-    // The phone number is how members find their card again, so it must stay valid and unique.
-    if (!phoneKey(phone)) return toast('Enter a valid mobile number', 'info');
-    if (findByPhone(phone, customer.id)) return toast('That number is already linked to another card', 'info');
-    updateProfile(customer.id, { name: name.trim(), phone: phone.trim(), email: email.trim() || undefined });
-    toast('Profile saved');
+    // The phone number identifies the card at the counter, so it must stay valid and unique.
+    if (!validPhone(phone)) return toast('Enter a valid mobile number', 'info');
+    setBusy(true);
+    try {
+      await updateProfile({ name: name.trim(), phone: phone.trim(), email: email.trim() });
+      toast('Profile saved');
+    } catch (err) {
+      toast((err as ApiError).message, 'info');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startTransfer = async () => {
+    try {
+      setTransfer(await requestTransfer());
+    } catch (err) {
+      toast((err as ApiError).message, 'info');
+    }
   };
 
   return (
@@ -60,12 +83,17 @@ export function Profile() {
             <label htmlFor="p-email">Email (optional)</label>
             <input id="p-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" autoComplete="email" />
           </div>
-          <button className="btn btn-dark" disabled={!dirty}>
-            Save changes
+          <button className="btn btn-dark" disabled={!dirty || busy}>
+            {busy ? 'Saving…' : 'Save changes'}
           </button>
         </form>
 
         <section className="card settings-list rise rise-3">
+          <button className="settings-row" onClick={startTransfer}>
+            <Icon name="phone" />
+            <span>Move to a new phone</span>
+            <Icon name="chevronRight" className="settings-chev" />
+          </button>
           <a href="https://bloeiselkoffie.co.za" target="_blank" rel="noreferrer" className="settings-row">
             <Icon name="bean" />
             <span>Visit bloeiselkoffie.co.za</span>
@@ -76,18 +104,37 @@ export function Profile() {
             <span>About the loyalty card</span>
             <Icon name="chevronRight" className="settings-chev" />
           </Link>
-          <button
-            className="settings-row danger"
-            onClick={() => {
-              signOut();
-              navigate('/app/join');
-            }}
-          >
+          <button className="settings-row danger" onClick={() => setConfirmRemove(true)}>
             <Icon name="logout" />
-            <span>Sign out</span>
+            <span>Remove card from this phone</span>
           </button>
         </section>
       </div>
+
+      <TransferSheet transfer={transfer} onClose={() => setTransfer(null)} who="your" />
+
+      <Sheet open={confirmRemove} onClose={() => setConfirmRemove(false)} title="Remove card from this phone?">
+        <div className="confirm">
+          <p className="muted">
+            Your stickers stay safe on your account, but this phone won't show the card any more. To get it back, ask your barista to send it to
+            your phone.
+          </p>
+          <div className="confirm-actions">
+            <button className="btn btn-ghost" onClick={() => setConfirmRemove(false)}>
+              Keep it here
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={async () => {
+                await removeCardFromDevice();
+                navigate('/app/join');
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

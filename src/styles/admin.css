@@ -1884,3 +1884,30 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
   }
 }
+
+.pin-pad button.is-go {
+  display: grid;
+  place-items: center;
+  background: var(--rose-500);
+  border-color: var(--rose-500);
+  color: #fff;
+  box-shadow: var(--shadow-rose);
+}
+.pin-pad button.is-go:disabled {
+  opacity: 0.35;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.pin-pad button.is-go svg {
+  width: 24px;
+  height: 24px;
+}
+
+.ad-offline {
+  margin: 0 var(--s-4) var(--s-3);
+}
+@media (min-width: 1024px) {
+  .ad-offline {
+    margin: 0 var(--s-8) var(--s-3);
+  }
+}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '../../components/Feedback';
 import { Icon, type IconName } from '../../components/Icon';
 import { MiniSticker } from '../../components/Sticker';
-import { useDB } from '../../data/store';
+import { useAdminDB } from '../../data/store';
 import { closeToReward, kpis, series, topDrinks } from '../../lib/analytics';
 import { initials, pct, timeAgo } from '../../lib/format';
 import { AreaChart } from './AreaChart';
@@ -36,7 +36,7 @@ function KpiCard({ icon, label, value, delta, progress, caption, tone = 'rose' }
 }
 
 export function Dashboard() {
-  const db = useDB();
+  const db = useAdminDB();
   const toast = useToast();
   const [range, setRange] = useState<'today' | '7d' | '30d'>('7d');
   const k = useMemo(() => kpis(db), [db]);

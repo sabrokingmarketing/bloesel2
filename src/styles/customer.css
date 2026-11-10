@@ -1484,3 +1484,175 @@
   border-top-color: var(--rose-500);
   animation: spin 0.8s linear infinite;
 }
+
+/* =========================================================
+   Sync states, card transfer
+   ========================================================= */
+.offline-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto var(--s-3);
+  max-width: 1120px;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  background: var(--espresso-900);
+  color: var(--cream);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  width: fit-content;
+}
+.offline-bar svg {
+  width: 15px;
+  height: 15px;
+  color: var(--rose-300);
+  animation: spin 2.4s linear infinite;
+}
+.qr-live {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--fs-12);
+  color: rgba(255, 255, 255, 0.82);
+}
+.qr-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b9f6ca;
+  box-shadow: 0 0 0 0 rgba(185, 246, 202, 0.7);
+  animation: live 2s ease-out infinite;
+}
+.qr-live-dot.is-off {
+  background: var(--caramel-300);
+  animation: none;
+}
+@keyframes live {
+  70% {
+    box-shadow: 0 0 0 8px rgba(185, 246, 202, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(185, 246, 202, 0);
+  }
+}
+.qr-loading {
+  background: var(--rose-500);
+}
+.move-steps {
+  list-style: none;
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-4);
+}
+.move-steps li {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.move-steps strong {
+  font-weight: 600;
+}
+.move-steps p {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: var(--fs-13);
+}
+.move-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  text-align: center;
+}
+.claim {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s-6);
+  padding: var(--s-6) var(--s-5);
+}
+.claim-card {
+  width: min(400px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  text-align: center;
+  padding: var(--s-8) var(--s-6);
+}
+.claim-card h1 {
+  font-size: var(--fs-32);
+}
+.claim-card .btn {
+  margin-top: var(--s-3);
+}
+.claim-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  background: var(--blush-50);
+  color: var(--rose-600);
+}
+.claim-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.claim-icon:not(.is-error) svg {
+  animation: sway 1.6s ease-in-out infinite;
+}
+.claim-icon.is-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.transfer {
+  display: grid;
+  gap: var(--s-4);
+  justify-items: center;
+  text-align: center;
+}
+.transfer-qr {
+  width: min(260px, 100%);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: linear-gradient(150deg, var(--blush-100), var(--blush-200));
+}
+.transfer-qr svg {
+  border-radius: 14px;
+  padding: 8px;
+  background: #fff;
+}
+.transfer-qr.is-expired {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+.transfer-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--rose-600);
+}
+.transfer-timer svg {
+  width: 16px;
+  height: 16px;
+}
+.transfer-timer.is-expired {
+  color: var(--danger);
+}
+.confirm {
+  display: grid;
+  gap: var(--s-5);
+}
+.confirm-actions {
+  display: flex;
+  gap: var(--s-3);
+  justify-content: flex-end;
+}

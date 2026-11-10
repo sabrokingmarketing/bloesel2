@@ -3,16 +3,14 @@ import { CoffeeBreak } from '../../components/CoffeeBreak';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { MiniSticker } from '../../components/Sticker';
-import { useDB } from '../../data/store';
 import { firstName, greeting, timeAgo } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
 
 export function Home() {
-  const { customer, settings, newIndex } = useCustomerCtx();
-  const db = useDB();
+  const { customer, activity, settings, newIndex } = useCustomerCtx();
   const max = settings.stampsRequired;
   const complete = customer.stamps >= max;
-  const recent = db.activity.filter((a) => a.customerId === customer.id && a.type !== 'join').slice(0, 4);
+  const recent = activity.filter((a) => a.type !== 'join').slice(0, 4);
 
   return (
     <div className="cx-home">

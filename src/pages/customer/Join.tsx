@@ -1,14 +1,18 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { CoffeeBreak } from '../../components/CoffeeBreak';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
-import { createCustomer, findByPhone, recordCampaignScan, signIn, signInDemo, useSessionCustomer } from '../../data/store';
+import { ApiError, joinProgramme, useMe } from '../../data/store';
+
+const validPhone = (p: string) => {
+  const d = p.replace(/\D/g, '');
+  return d.length >= 9 && d.length <= 15;
+};
 
 export function Join() {
-  const existing = useSessionCustomer();
-  const [params] = useSearchParams();
+  const me = useMe();
   const navigate = useNavigate();
   const toast = useToast();
   const [mode, setMode] = useState<'join' | 'find'>('join');
@@ -17,46 +21,31 @@ export function Join() {
   const [email, setEmail] = useState('');
   const [consent, setConsent] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    // Count a scan when someone arrives from a printed QR (e.g. ?src=counter), once per session.
-    const src = params.get('src');
-    const key = `bloeisel.scan.${src}`;
-    if (src && !sessionStorage.getItem(key)) {
-      sessionStorage.setItem(key, '1');
-      recordCampaignScan(src);
-    }
-  }, [params]);
+  if (me.status === 'ready') return <Navigate to="/app" replace />;
 
-  if (existing) return <Navigate to="/app" replace />;
-
-  const validPhone = (p: string) => p.replace(/\D/g, '').length >= 9;
-
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (mode === 'join' && name.trim().length < 2) errs.name = 'Tell us what to call you';
+    if (name.trim().length < 2) errs.name = 'Tell us what to call you';
     if (!validPhone(phone)) errs.phone = 'Enter a valid mobile number';
-    if (mode === 'join' && email && !/^\S+@\S+\.\S+$/.test(email)) errs.email = 'That email looks off';
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) errs.email = 'That email looks off';
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
-    const found = findByPhone(phone);
-    if (mode === 'find') {
-      if (!found) return setErrors({ phone: "We couldn't find a card for that number" });
-      signIn(found.id);
-      toast(`Welcome back, ${found.name.split(' ')[0]}`, 'heart');
-      return navigate('/app');
+    setBusy(true);
+    try {
+      await joinProgramme({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined, marketingOptIn: consent });
+      toast('Your card is ready. First sticker at the till!', 'sparkle');
+      navigate('/app');
+    } catch (err) {
+      const e = err as ApiError;
+      if (e.code === 'phone_taken') setErrors({ phone: e.message });
+      else toast(e.message, 'info');
+    } finally {
+      setBusy(false);
     }
-    if (found) {
-      signIn(found.id);
-      toast('You already have a card. Welcome back!', 'heart');
-      return navigate('/app');
-    }
-    const c = createCustomer({ name, phone, email });
-    signIn(c.id);
-    toast('Your card is ready. First sticker on us at the till!', 'sparkle');
-    navigate('/app');
   };
 
   return (
@@ -82,65 +71,35 @@ export function Join() {
         </div>
         <div className="join-form-inner rise">
           <div className="segmented join-tabs" role="group" aria-label="Choose">
-            <button type="button" aria-pressed={mode === 'join'} onClick={() => (setMode('join'), setErrors({}))}>
+            <button type="button" aria-pressed={mode === 'join'} onClick={() => setMode('join')}>
               New card
             </button>
-            <button type="button" aria-pressed={mode === 'find'} onClick={() => (setMode('find'), setErrors({}))}>
+            <button type="button" aria-pressed={mode === 'find'} onClick={() => setMode('find')}>
               I have a card
             </button>
           </div>
 
-          <h1 className="display join-title">{mode === 'join' ? 'Start your card' : 'Find your card'}</h1>
-          <p className="muted join-lede">
-            {mode === 'join' ? 'It takes ten seconds. Your first sticker is waiting at the counter.' : 'Enter the mobile number you signed up with.'}
-          </p>
+          {mode === 'join' ? (
+            <>
+              <h1 className="display join-title">Start your card</h1>
+              <p className="muted join-lede">It takes ten seconds. Your first sticker is waiting at the counter.</p>
 
-          <form className="join-form" onSubmit={submit} noValidate>
-            {mode === 'join' && (
-              <div className="field">
-                <label htmlFor="j-name">Your name</label>
-                <input
-                  id="j-name"
-                  className="input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Lerato Mokoena"
-                  autoComplete="name"
-                  aria-invalid={!!errors.name}
-                />
-                {errors.name && <span className="field-error">{errors.name}</span>}
-              </div>
-            )}
-            <div className="field">
-              <label htmlFor="j-phone">Mobile number</label>
-              <input
-                id="j-phone"
-                className="input"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+27 82 123 4567"
-                inputMode="tel"
-                autoComplete="tel"
-                aria-invalid={!!errors.phone}
-              />
-              {errors.phone && <span className="field-error">{errors.phone}</span>}
-            </div>
-            {mode === 'join' && (
-              <>
+              <form className="join-form" onSubmit={submit} noValidate>
+                <div className="field">
+                  <label htmlFor="j-name">Your name</label>
+                  <input id="j-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Lerato Mokoena" autoComplete="name" aria-invalid={!!errors.name} />
+                  {errors.name && <span className="field-error">{errors.name}</span>}
+                </div>
+                <div className="field">
+                  <label htmlFor="j-phone">Mobile number</label>
+                  <input id="j-phone" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 82 123 4567" inputMode="tel" autoComplete="tel" aria-invalid={!!errors.phone} />
+                  {errors.phone && <span className="field-error">{errors.phone}</span>}
+                </div>
                 <div className="field">
                   <label htmlFor="j-email">
                     Email <span className="faint">(optional)</span>
                   </label>
-                  <input
-                    id="j-email"
-                    className="input"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    inputMode="email"
-                    autoComplete="email"
-                    aria-invalid={!!errors.email}
-                  />
+                  <input id="j-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" aria-invalid={!!errors.email} />
                   {errors.email && <span className="field-error">{errors.email}</span>}
                 </div>
                 <label className="check">
@@ -150,27 +109,39 @@ export function Join() {
                   </span>
                   <span>Send me the odd treat and new-menu news. No spam, promise.</span>
                 </label>
-              </>
-            )}
-            <button className="btn btn-primary btn-lg btn-block">
-              {mode === 'join' ? 'Create my card' : 'Open my card'} <Icon name="arrowRight" />
-            </button>
-          </form>
+                <button className="btn btn-primary btn-lg btn-block" disabled={busy}>
+                  {busy ? 'Creating your card…' : 'Create my card'} <Icon name="arrowRight" />
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h1 className="display join-title">Bring your card over</h1>
+              <p className="muted join-lede">Your card lives on the phone you signed up with. Here is how to move it to this one.</p>
+              <ol className="move-steps">
+                <li>
+                  <span className="step-num">1</span>
+                  <div>
+                    <strong>Still have your old phone?</strong>
+                    <p>
+                      Open your card there, go to <b>Profile</b> and tap <b>Move to a new phone</b>. Scan the code it shows with this phone.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span className="step-num">2</span>
+                  <div>
+                    <strong>Lost it or changed numbers?</strong>
+                    <p>Ask your barista at the counter. They can send your card to this phone in seconds, stickers and all.</p>
+                  </div>
+                </li>
+              </ol>
+              <p className="field-hint move-note">
+                <Icon name="shield" size={14} /> This keeps anyone else from claiming your free coffee with just your number.
+              </p>
+            </>
+          )}
 
-          <div className="join-demo">
-            <span className="divider" />
-            <span className="faint">or</span>
-            <span className="divider" />
-          </div>
-          <button
-            className="btn btn-ghost btn-block"
-            onClick={() => {
-              signInDemo();
-              navigate('/app');
-            }}
-          >
-            <Icon name="eye" /> Explore the demo card
-          </button>
           <p className="join-foot faint">
             Working at Bloeisel? <Link to="/admin" className="link">Staff portal</Link>
           </p>

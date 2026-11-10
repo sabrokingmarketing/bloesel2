@@ -4,7 +4,7 @@ import { Confetti } from '../../components/Confetti';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
-import { addStamp, adjustStamps, findByCode, redeemReward, useDB } from '../../data/store';
+import { addStamp, adjustStamps, lookupMember, redeemReward, useAdminDB, type ApiError } from '../../data/store';
 import { DRINKS } from '../../data/seed';
 import { initials, timeAgo } from '../../lib/format';
 
@@ -16,7 +16,7 @@ async function decode(image: ImageData) {
 }
 
 export function Scan() {
-  const db = useDB();
+  const db = useAdminDB();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -32,15 +32,19 @@ export function Scan() {
   const [celebrate, setCelebrate] = useState(0);
   const [flash, setFlash] = useState(false);
   const [lastStampId, setLastStampId] = useState<string | null>(null);
+  // One till action at a time, so a double tap can never add two stickers.
+  const [acting, setActing] = useState(false);
 
   const customer = selectedId ? db.customers.find((c) => c.id === selectedId) : undefined;
   const max = db.settings.stampsRequired;
 
   const select = useCallback(
-    (raw: string) => {
-      const c = findByCode(raw);
-      if (!c) {
-        toast('No member found for that code', 'info');
+    async (raw: string) => {
+      let c;
+      try {
+        c = await lookupMember(raw);
+      } catch (err) {
+        toast((err as ApiError).message, 'info');
         return false;
       }
       setSelectedId(c.id);
@@ -59,7 +63,7 @@ export function Scan() {
   useEffect(() => {
     const code = params.get('code');
     if (code) {
-      select(code);
+      void select(code);
       params.delete('code');
       setParams(params, { replace: true });
     }
@@ -117,9 +121,8 @@ export function Scan() {
         const text = await decode(ctx.getImageData(0, 0, w, h));
         if (text && text !== lastHit) {
           lastHit = text;
-          if (select(text)) {
-            window.setTimeout(() => (lastHit = ''), 2500);
-          }
+          const hit = text;
+          void select(hit).then(() => window.setTimeout(() => lastHit === hit && (lastHit = ''), 2500));
         }
         busy = false;
       };
@@ -145,45 +148,58 @@ export function Scan() {
     URL.revokeObjectURL(img.src);
     const text = await decode(ctx.getImageData(0, 0, c.width, c.height));
     if (!text) toast("Couldn't find a QR code in that photo", 'info');
-    else select(text);
+    else void select(text);
   };
 
-  const submitManual = (e: FormEvent) => {
+  const submitManual = async (e: FormEvent) => {
     e.preventDefault();
-    if (select(manual)) setManual('');
+    if (await select(manual)) setManual('');
   };
 
-  const stamp = () => {
-    if (!customer) return;
-    const res = addStamp(customer.id, drink);
-    if (!res.ok) return toast(res.reason === 'full' ? 'Card is full. Redeem the reward first.' : 'Member not found', 'info');
-    setNewIndex(res.customer.stamps - 1);
-    setLastStampId(customer.id);
-    if (res.completed) {
-      setCelebrate(Date.now());
-      toast(`${customer.name.split(' ')[0]} unlocked a free coffee!`, 'gift');
-    } else {
-      toast(`Sticker ${res.customer.stamps} of ${max} added`, 'check');
+  const act = async (fn: () => Promise<void>) => {
+    if (acting) return;
+    setActing(true);
+    try {
+      await fn();
+    } catch (err) {
+      toast((err as ApiError).message, 'info');
+    } finally {
+      setActing(false);
     }
   };
 
-  const undo = () => {
-    if (!customer) return;
-    adjustStamps(customer.id, -1, 'Undo at till');
-    setNewIndex(null);
-    setLastStampId(null);
-    toast('Last sticker removed', 'refresh');
-  };
+  const stamp = () =>
+    act(async () => {
+      if (!customer) return;
+      const res = await addStamp(customer.id, drink);
+      setNewIndex(Math.min(res.customer.stamps, max) - 1);
+      setLastStampId(customer.id);
+      if (res.completed) {
+        setCelebrate(Date.now());
+        toast(`${customer.name.split(' ')[0]} unlocked a free coffee!`, 'gift');
+      } else {
+        toast(`Sticker ${res.customer.stamps} of ${max} added`, 'check');
+      }
+    });
 
-  const redeem = () => {
-    if (!customer) return;
-    if (redeemReward(customer.id)) {
+  const undo = () =>
+    act(async () => {
+      if (!customer) return;
+      await adjustStamps(customer.id, -1, 'Undo at till');
+      setNewIndex(null);
+      setLastStampId(null);
+      toast('Last sticker removed', 'refresh');
+    });
+
+  const redeem = () =>
+    act(async () => {
+      if (!customer) return;
+      await redeemReward(customer.id);
       setNewIndex(null);
       setLastStampId(null);
       setCelebrate(Date.now());
       toast('Free coffee redeemed. Fresh card started.', 'gift');
-    }
-  };
+    });
 
   const recent = [...db.customers].sort((a, b) => (b.lastVisit ?? '').localeCompare(a.lastVisit ?? '')).slice(0, 6);
   const complete = customer ? customer.stamps >= max : false;
@@ -269,7 +285,7 @@ export function Scan() {
             <p className="muted">Scan a member’s QR, or pick a regular below to stamp their card.</p>
             <div className="quick-pick">
               {recent.map((c) => (
-                <button key={c.id} onClick={() => select(c.code)}>
+                <button key={c.id} onClick={() => void select(c.code)}>
                   <span className="avatar">{initials(c.name)}</span>
                   <span>
                     <strong>{c.name}</strong>
@@ -304,7 +320,7 @@ export function Scan() {
                   <strong>Free coffee ready</strong>
                   <span>{db.settings.rewardName}</span>
                 </div>
-                <button className="btn btn-dark btn-lg" onClick={redeem}>
+                <button className="btn btn-dark btn-lg" onClick={redeem} disabled={acting}>
                   <Icon name="gift" /> Redeem now
                 </button>
               </div>
@@ -317,7 +333,7 @@ export function Scan() {
                     </button>
                   ))}
                 </div>
-                <button className="btn btn-primary btn-lg btn-block scan-stamp" onClick={stamp}>
+                <button className="btn btn-primary btn-lg btn-block scan-stamp" onClick={stamp} disabled={acting}>
                   <Icon name="plus" /> Add sticker · {drink}
                 </button>
               </>
@@ -330,7 +346,7 @@ export function Scan() {
                 <Icon name="gift" /> {customer.rewardsRedeemed} redeemed
               </span>
               {lastStampId === customer.id && (
-                <button className="link" onClick={undo}>
+                <button className="link" onClick={undo} disabled={acting}>
                   Undo last sticker
                 </button>
               )}

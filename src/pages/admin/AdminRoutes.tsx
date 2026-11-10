@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useAdminAuthed } from '../../data/store';
+import { checkAdminSession, useAdmin, useAdminSync } from '../../data/store';
 import { AdminLayout } from './AdminLayout';
 import { AdminLogin } from './AdminLogin';
 import { Customers } from './Customers';
@@ -9,8 +10,15 @@ import { Scan } from './Scan';
 import { SettingsPage } from './Settings';
 
 export default function AdminRoutes() {
-  const authed = useAdminAuthed();
-  if (!authed) return <AdminLogin />;
+  const admin = useAdmin();
+  useEffect(() => {
+    void checkAdminSession();
+  }, []);
+  useAdminSync(10_000);
+
+  if (admin.auth === 'unknown') return <div className="page-loading" aria-label="Loading" />;
+  if (admin.auth === 'out') return <AdminLogin />;
+  if (!admin.db) return <div className="page-loading" aria-label="Loading" />;
   return (
     <Routes>
       <Route element={<AdminLayout />}>

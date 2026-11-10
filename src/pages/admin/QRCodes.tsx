@@ -3,7 +3,7 @@ import { BrandQR } from '../../components/BrandQR';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
-import { createCampaign, deleteCampaign, updateCampaign, useDB } from '../../data/store';
+import { campaignQrUrl, createCampaign, deleteCampaign, updateCampaign, useAdminDB, type ApiError } from '../../data/store';
 import type { Campaign, CampaignKind } from '../../data/types';
 import { shortDate } from '../../lib/format';
 import { absoluteUrl, downloadDataUrl, qrToPngDataUrl } from '../../lib/qr';
@@ -19,7 +19,7 @@ function slug(s: string) {
 }
 
 async function printPoster(c: Campaign) {
-  const png = await qrToPngDataUrl(absoluteUrl(c.url), { size: 1000 });
+  const png = await qrToPngDataUrl(campaignQrUrl(c), { size: 1000 });
   const w = window.open('', '_blank', 'width=800,height=1000');
   if (!w) return false;
   const headline = c.kind === 'join' ? 'Scan for your<br/><em>free 10th coffee</em>' : `Scan for<br/><em>${c.name}</em>`;
@@ -41,7 +41,7 @@ p{margin:0;font-size:13px;opacity:.9}
 }
 
 export function QRCodes() {
-  const db = useDB();
+  const db = useAdminDB();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState<Campaign | null>(null);
@@ -49,14 +49,14 @@ export function QRCodes() {
   const featured = db.campaigns.find((c) => c.kind === 'join' && c.active) ?? db.campaigns[0];
 
   const download = async (c: Campaign) => {
-    const png = await qrToPngDataUrl(absoluteUrl(c.url), { title: c.name, subtitle: 'Bloeisel Koffie · scan to collect stickers' });
+    const png = await qrToPngDataUrl(campaignQrUrl(c), { title: c.name, subtitle: 'Bloeisel Koffie · scan to collect stickers' });
     downloadDataUrl(png, `bloeisel-qr-${slug(c.name)}.png`);
     toast('QR code downloaded', 'download');
   };
 
   const copy = async (c: Campaign) => {
     try {
-      await navigator.clipboard.writeText(absoluteUrl(c.url));
+      await navigator.clipboard.writeText(campaignQrUrl(c));
       toast('Link copied', 'link');
     } catch {
       toast('Could not copy link', 'info');
@@ -101,7 +101,7 @@ export function QRCodes() {
                 Scan for your <em>free 10th coffee</em>
               </p>
               <div className="qrm-poster-qr">
-                <BrandQR value={absoluteUrl(featured.url)} label={`QR code for ${featured.name}`} />
+                <BrandQR value={campaignQrUrl(featured)} label={`QR code for ${featured.name}`} />
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ export function QRCodes() {
         {db.campaigns.map((c) => (
           <article key={c.id} className={`card qr-tile ${c.active ? '' : 'is-off'}`}>
             <button className="qr-tile-art" onClick={() => setPreview(c)} aria-label={`Preview ${c.name}`}>
-              <BrandQR value={absoluteUrl(c.url)} label={`QR code for ${c.name}`} />
+              <BrandQR value={campaignQrUrl(c)} label={`QR code for ${c.name}`} />
               {!c.active && <span className="qr-tile-paused">Paused</span>}
             </button>
             <div className="qr-tile-body">
@@ -122,7 +122,7 @@ export function QRCodes() {
                   <p className="faint">{c.placement}</p>
                 </div>
                 <label className="switch" title={c.active ? 'Pause' : 'Activate'}>
-                  <input type="checkbox" checked={c.active} onChange={(e) => updateCampaign(c.id, { active: e.target.checked })} aria-label={`${c.name} active`} />
+                  <input type="checkbox" checked={c.active} onChange={(e) => updateCampaign(c.id, { active: e.target.checked }).catch((err: ApiError) => toast(err.message, 'info'))} aria-label={`${c.name} active`} />
                   <span />
                 </label>
               </div>
@@ -161,9 +161,9 @@ export function QRCodes() {
         {preview && (
           <div className="qr-preview">
             <div className="qr-preview-art">
-              <BrandQR value={absoluteUrl(preview.url)} label={`QR code for ${preview.name}`} />
+              <BrandQR value={campaignQrUrl(preview)} label={`QR code for ${preview.name}`} />
             </div>
-            <p className="faint qr-preview-url">{absoluteUrl(preview.url)}</p>
+            <p className="faint qr-preview-url">Opens {absoluteUrl(preview.url)}</p>
             <div className="qr-preview-stats">
               <span>
                 <strong className="tabular">{preview.scans}</strong> scans
@@ -176,11 +176,14 @@ export function QRCodes() {
               </button>
               <button
                 className="btn btn-danger"
-                onClick={() => {
-                  deleteCampaign(preview.id);
-                  setPreview(null);
-                  toast('QR code deleted', 'trash');
-                }}
+                onClick={() =>
+                  deleteCampaign(preview.id)
+                    .then(() => {
+                      setPreview(null);
+                      toast('QR code deleted', 'trash');
+                    })
+                    .catch((err: ApiError) => toast(err.message, 'info'))
+                }
               >
                 <Icon name="trash" /> Delete
               </button>
@@ -200,13 +203,22 @@ function NewCampaignSheet({ open, onClose }: { open: boolean; onClose: () => voi
   const [url, setUrl] = useState('');
   const [err, setErr] = useState('');
 
-  const finalUrl = kind === 'join' ? `/app/join?src=${slug(name) || 'new'}` : kind === 'menu' ? 'https://bloeiselkoffie.co.za' : url;
+  const [busy, setBusy] = useState(false);
+  const previewUrl = kind === 'custom' ? url || 'https://' : kind === 'menu' ? 'https://bloeiselkoffie.co.za' : '/app/join';
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return setErr('Give the code a name');
     if (kind === 'custom' && !/^https?:\/\/\S+\.\S+/.test(url)) return setErr('Enter a full link, starting with https://');
-    createCampaign({ name: name.trim(), placement: placement.trim() || 'Not placed yet', kind, url: finalUrl });
+    setBusy(true);
+    try {
+      await createCampaign({ name: name.trim(), placement: placement.trim(), kind, targetUrl: kind === 'custom' ? url.trim() : undefined });
+    } catch (error) {
+      setErr((error as ApiError).message);
+      return;
+    } finally {
+      setBusy(false);
+    }
     toast('QR code created', 'qr');
     setName('');
     setPlacement('');
@@ -219,7 +231,7 @@ function NewCampaignSheet({ open, onClose }: { open: boolean; onClose: () => voi
     <Sheet open={open} onClose={onClose} title="New QR code">
       <form className="new-qr" onSubmit={submit}>
         <div className="new-qr-preview">
-          <BrandQR value={absoluteUrl(finalUrl || '/')} label="Preview" />
+          <BrandQR value={absoluteUrl(previewUrl)} label="Preview" />
         </div>
         <div className="new-qr-fields">
           <div className="field">
@@ -247,7 +259,7 @@ function NewCampaignSheet({ open, onClose }: { open: boolean; onClose: () => voi
             </div>
           )}
           {err && <p className="field-error">{err}</p>}
-          <button className="btn btn-primary btn-block">
+          <button className="btn btn-primary btn-block" disabled={busy}>
             <Icon name="qr" /> Create QR code
           </button>
         </div>
