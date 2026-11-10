@@ -1,6 +1,5 @@
 import { Icon } from '../../components/Icon';
 import { MiniSticker } from '../../components/Sticker';
-import { useDB } from '../../data/store';
 import type { Activity } from '../../data/types';
 import { useCustomerCtx } from './CustomerLayout';
 
@@ -18,9 +17,7 @@ function label(a: Activity) {
 }
 
 export function History() {
-  const { customer } = useCustomerCtx();
-  const db = useDB();
-  const items = db.activity.filter((a) => a.customerId === customer.id);
+  const { activity: items } = useCustomerCtx();
 
   const groups = new Map<string, Activity[]>();
   for (const a of items) {

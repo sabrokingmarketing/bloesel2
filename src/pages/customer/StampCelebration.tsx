@@ -12,23 +12,23 @@ export type StampEvent = { kind: 'stamp'; index: number; complete: boolean; key:
  * redeems a reward (from any device, synced through the store), it emits a
  * short-lived event the UI celebrates.
  */
-export function useStampWatcher(customer: Customer | undefined, settings: Settings) {
+export function useStampWatcher(customer: Customer | undefined, settings: Settings | undefined) {
   const prev = useRef<{ id: string; stamps: number; redeemed: number } | null>(null);
   const [event, setEvent] = useState<StampEvent | null>(null);
 
   useEffect(() => {
-    if (!customer) return;
+    if (!customer || !settings) return;
     const p = prev.current;
     prev.current = { id: customer.id, stamps: customer.stamps, redeemed: customer.rewardsRedeemed };
     if (!p || p.id !== customer.id) return;
     if (customer.stamps > p.stamps) {
-      setEvent({ kind: 'stamp', index: customer.stamps - 1, complete: customer.stamps >= settings.stampsRequired, key: Date.now() });
+      setEvent({ kind: 'stamp', index: Math.min(customer.stamps, settings.stampsRequired) - 1, complete: customer.stamps >= settings.stampsRequired, key: Date.now() });
       navigator.vibrate?.([18, 40, 28]);
     } else if (customer.rewardsRedeemed > p.redeemed) {
       setEvent({ kind: 'redeem', key: Date.now() });
       navigator.vibrate?.([30, 50, 30, 50, 60]);
     }
-  }, [customer, settings.stampsRequired]);
+  }, [customer, settings]);
 
   useEffect(() => {
     if (!event) return;
@@ -88,8 +88,11 @@ export function StampCelebration({ event, customer, settings }: { event: StampEv
               : `${left} more cups to your free coffee, ${customer.name.split(' ')[0]}.`}
         </p>
         {event.complete ? (
-          <Link to="/app/rewards" className="btn btn-primary btn-block" onClick={close}>
-            <Icon name="gift" /> See my reward
+          <Link to="/app/rewards" className="btn btn-primary btn-block btn-cta" onClick={close}>
+            See my reward
+            <span className="btn-orb">
+              <Icon name="gift" />
+            </span>
           </Link>
         ) : (
           <button className="btn btn-dark btn-block" onClick={close}>

@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom';
 import { Icon, type IconName } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
-import { useDB, useSessionCustomer } from '../../data/store';
-import type { Customer, Settings } from '../../data/types';
+import { useMe, useMeSync } from '../../data/store';
+import type { Activity, Customer, Settings } from '../../data/types';
 import { initials } from '../../lib/format';
 import { StampCelebration, useStampWatcher } from './StampCelebration';
 
-export type CustomerCtx = { customer: Customer; settings: Settings; newIndex: number | null };
+export type CustomerCtx = { customer: Customer; activity: Activity[]; settings: Settings; newIndex: number | null };
 export const useCustomerCtx = () => useOutletContext<CustomerCtx>();
 
 const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
@@ -18,10 +18,12 @@ const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> =
 ];
 
 export function CustomerLayout() {
-  const db = useDB();
-  const customer = useSessionCustomer();
+  const me = useMe();
+  useMeSync(15_000);
+  const customer = me.data?.customer;
+  const settings = me.data?.settings;
   const location = useLocation();
-  const event = useStampWatcher(customer, db.settings);
+  const event = useStampWatcher(customer, settings);
   const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -36,9 +38,15 @@ export function CustomerLayout() {
     window.scrollTo({ top: 0 });
   }, [location.pathname]);
 
-  if (!customer) return <Navigate to={`/app/join${location.search}`} replace />;
+  if (me.status === 'none') return <Navigate to={`/app/join${location.search}`} replace />;
+  if (!customer || !settings || !me.data) return <div className="page-loading" aria-label="Loading your card" />;
 
-  const ctx: CustomerCtx = { customer, settings: db.settings, newIndex: event?.kind === 'stamp' ? event.index : null };
+  const ctx: CustomerCtx = {
+    customer,
+    activity: me.data.activity,
+    settings,
+    newIndex: event?.kind === 'stamp' ? event.index : null,
+  };
 
   return (
     <div className="cx">
@@ -65,6 +73,11 @@ export function CustomerLayout() {
         </div>
       </header>
 
+      {me.offline && (
+        <div className="offline-bar" role="status">
+          <Icon name="refresh" /> Offline. Showing your last saved card.
+        </div>
+      )}
       <main className="cx-main" ref={mainRef}>
         <Outlet context={ctx} />
       </main>
@@ -90,7 +103,7 @@ export function CustomerLayout() {
         ))}
       </nav>
 
-      <StampCelebration event={event} customer={customer} settings={db.settings} />
+      <StampCelebration event={event} customer={customer} settings={settings} />
     </div>
   );
 }

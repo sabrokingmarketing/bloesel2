@@ -2,20 +2,19 @@ import { Link } from 'react-router-dom';
 import { BrandQR } from '../../components/BrandQR';
 import { Icon } from '../../components/Icon';
 import { Sticker } from '../../components/Sticker';
-import { qrPayload, useDB } from '../../data/store';
+import { qrPayload } from '../../data/store';
 import { shortDate } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
 
 export function Rewards() {
-  const { customer, settings } = useCustomerCtx();
-  const db = useDB();
+  const { customer, activity, settings } = useCustomerCtx();
   const max = settings.stampsRequired;
   const have = Math.min(customer.stamps, max);
   const complete = have >= max;
   const pct = have / max;
   const R = 62;
   const C = 2 * Math.PI * R;
-  const redeemed = db.activity.filter((a) => a.customerId === customer.id && a.type === 'redeem');
+  const redeemed = activity.filter((a) => a.type === 'redeem');
 
   return (
     <div className="cx-page">
@@ -80,8 +79,11 @@ export function Rewards() {
               <p className="muted">
                 You have {have} of {max} stickers. Keep collecting and your {max}th coffee is free.
               </p>
-              <Link to="/app/qr" className="btn btn-primary">
-                <Icon name="qr" /> Collect a sticker
+              <Link to="/app/qr" className="btn btn-primary btn-lg btn-cta">
+                Collect a sticker
+                <span className="btn-orb">
+                  <Icon name="qr" />
+                </span>
               </Link>
             </div>
           </section>

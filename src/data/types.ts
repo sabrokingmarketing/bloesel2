@@ -46,11 +46,10 @@ export type Settings = {
   storeName: string;
   stampsRequired: number;
   rewardName: string;
-  adminPin: string;
 };
 
+/** Everything the staff portal works from (GET /api/admin/snapshot). */
 export type DB = {
-  version: number;
   customers: Customer[];
   activity: Activity[];
   campaigns: Campaign[];

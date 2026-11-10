@@ -3,7 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
-import { adjustStamps, deleteCustomer, redeemReward, useDB } from '../../data/store';
+import { TransferSheet, type Transfer } from '../../components/TransferSheet';
+import { adjustStamps, deleteCustomer, redeemReward, staffTransfer, useAdminDB, type ApiError } from '../../data/store';
 import type { Customer } from '../../data/types';
 import { isLapsed } from '../../lib/analytics';
 import { dateTime, initials, shortDate, timeAgo } from '../../lib/format';
@@ -21,7 +22,7 @@ const FILTERS: Array<[Filter, string]> = [
 ];
 
 export function Customers() {
-  const db = useDB();
+  const db = useAdminDB();
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const filter = (params.get('filter') as Filter) ?? 'all';
@@ -180,10 +181,25 @@ export function Customers() {
 }
 
 function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: () => void }) {
-  const db = useDB();
+  const db = useAdminDB();
   const toast = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [transfer, setTransfer] = useState<Transfer | null>(null);
   if (!customer) return null;
+
+  const run = async (fn: () => Promise<unknown>, done?: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await fn();
+      if (done) toast(done, 'check');
+    } catch (err) {
+      toast((err as ApiError).message, 'info');
+    } finally {
+      setBusy(false);
+    }
+  };
   const max = db.settings.stampsRequired;
   const acts = db.activity.filter((a) => a.customerId === customer.id).slice(0, 8);
 
@@ -206,24 +222,18 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
 
         <div className="csheet-actions">
           <div className="stepper" aria-label="Adjust stickers">
-            <button onClick={() => adjustStamps(customer.id, -1, 'Manual correction')} disabled={customer.stamps <= 0} aria-label="Remove a sticker">
+            <button onClick={() => run(() => adjustStamps(customer.id, -1, 'Manual correction'))} disabled={busy || customer.stamps <= 0} aria-label="Remove a sticker">
               <Icon name="minus" />
             </button>
             <span className="tabular">
               {customer.stamps}/{max}
             </span>
-            <button onClick={() => adjustStamps(customer.id, 1, 'Manual correction')} disabled={customer.stamps >= max} aria-label="Add a sticker">
+            <button onClick={() => run(() => adjustStamps(customer.id, 1, 'Manual correction'))} disabled={busy || customer.stamps >= max} aria-label="Add a sticker">
               <Icon name="plus" />
             </button>
           </div>
           {customer.stamps >= max ? (
-            <button
-              className="btn btn-dark"
-              onClick={() => {
-                redeemReward(customer.id);
-                toast('Free coffee redeemed', 'gift');
-              }}
-            >
+            <button className="btn btn-dark" disabled={busy} onClick={() => run(() => redeemReward(customer.id), 'Free coffee redeemed')}>
               <Icon name="gift" /> Redeem reward
             </button>
           ) : (
@@ -232,6 +242,10 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
             </Link>
           )}
         </div>
+
+        <button className="btn btn-ghost btn-block" disabled={busy} onClick={() => run(async () => setTransfer(await staffTransfer(customer.id)))}>
+          <Icon name="phone" /> Send card to a new phone
+        </button>
 
         <dl className="csheet-stats">
           <div>
@@ -281,11 +295,13 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
               </button>
               <button
                 className="btn btn-sm btn-danger"
-                onClick={() => {
-                  deleteCustomer(customer.id);
-                  toast('Member removed', 'trash');
-                  onClose();
-                }}
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await deleteCustomer(customer.id);
+                    onClose();
+                  }, 'Member removed')
+                }
               >
                 Remove
               </button>
@@ -297,6 +313,7 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
           )}
         </div>
       </div>
+      <TransferSheet transfer={transfer} onClose={() => setTransfer(null)} who={`${customer.name.split(' ')[0]}'s`} />
     </Sheet>
   );
 }

@@ -3,16 +3,14 @@ import { CoffeeBreak } from '../../components/CoffeeBreak';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { MiniSticker } from '../../components/Sticker';
-import { useDB } from '../../data/store';
 import { firstName, greeting, timeAgo } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
 
 export function Home() {
-  const { customer, settings, newIndex } = useCustomerCtx();
-  const db = useDB();
+  const { customer, activity, settings, newIndex } = useCustomerCtx();
   const max = settings.stampsRequired;
   const complete = customer.stamps >= max;
-  const recent = db.activity.filter((a) => a.customerId === customer.id && a.type !== 'join').slice(0, 4);
+  const recent = activity.filter((a) => a.type !== 'join').slice(0, 4);
 
   return (
     <div className="cx-home">
@@ -20,7 +18,7 @@ export function Home() {
         <div className="cx-hero-copy">
           <p className="eyebrow cx-hero-eyebrow">{greeting()}</p>
           <h1 className="display cx-hero-title">
-            {firstName(customer.name)}, time for a <span className="display-italic">koffie</span> break?
+            {firstName(customer.name)}, time for a <span className="heading-accent">koffie</span> break?
           </h1>
         </div>
         <div className="cx-hero-art">
@@ -34,9 +32,11 @@ export function Home() {
             My loyalty card
           </h2>
           <LoyaltyCard customer={customer} settings={settings} newIndex={newIndex} />
-          <Link to={complete ? '/app/rewards' : '/app/qr'} className={`btn btn-lg btn-block cx-card-cta ${complete ? 'btn-dark' : 'btn-primary'}`}>
-            <Icon name={complete ? 'gift' : 'qr'} />
+          <Link to={complete ? '/app/rewards' : '/app/qr'} className={`btn btn-lg btn-block btn-cta cx-card-cta ${complete ? 'btn-dark' : 'btn-primary'}`}>
             {complete ? 'Claim my free coffee' : 'Show my QR to collect'}
+            <span className="btn-orb">
+              <Icon name={complete ? 'gift' : 'qr'} />
+            </span>
           </Link>
         </section>
 

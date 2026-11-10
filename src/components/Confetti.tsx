@@ -1,6 +1,6 @@
 import { useMemo, type CSSProperties } from 'react';
 
-const COLORS = ['#d9617f', '#f5c7d2', '#e8b974', '#2e1a16', '#ee9fb3', '#fffcfa'];
+const COLORS = ['#ff66c4', '#ffc1e5', '#e8b974', '#2e1a16', '#ffa0d8', '#fffcfa'];
 
 /** Petal confetti: blossom petals and beans falling from the top. */
 export function Confetti({ count = 46, seed = 0 }: { count?: number; seed?: number }) {

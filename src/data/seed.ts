@@ -191,7 +191,6 @@ export function createSeed(now = new Date()): DB {
   ];
 
   return {
-    version: 1,
     customers,
     activity,
     campaigns,
@@ -199,7 +198,6 @@ export function createSeed(now = new Date()): DB {
       storeName: 'Bloeisel Koffie',
       stampsRequired: 10,
       rewardName: 'Any coffee, on us',
-      adminPin: '1234',
     },
   };
 }

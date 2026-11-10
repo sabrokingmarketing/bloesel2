@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from '../../components/Icon';
-import { BlossomMark, Logo } from '../../components/Logo';
-import { adminSignOut, useDB } from '../../data/store';
+import { Logo } from '../../components/Logo';
+import { adminSignOut, useAdmin, useAdminDB } from '../../data/store';
 import { initials } from '../../lib/format';
 
 const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
@@ -22,7 +22,8 @@ const TITLES: Record<string, [string, string]> = {
 };
 
 export function AdminLayout() {
-  const db = useDB();
+  const db = useAdminDB();
+  const { offline } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const [drawer, setDrawer] = useState(false);
@@ -57,7 +58,7 @@ export function AdminLayout() {
       <aside className={`ad-side ${drawer ? 'is-open' : ''}`} aria-label="Staff navigation">
         <div className="ad-side-brand">
           <Link to="/admin" className="ad-side-logo">
-            {collapsed ? <BlossomMark size={34} /> : <Logo />}
+            <Logo size={collapsed ? 'sm' : 'md'} />
           </Link>
           <button className="icon-btn ghost ad-drawer-close" onClick={() => setDrawer(false)} aria-label="Close menu">
             <Icon name="close" />
@@ -73,7 +74,9 @@ export function AdminLayout() {
           ))}
         </nav>
         <div className="ad-side-promo">
-          <BlossomMark size={30} />
+          <span className="ad-side-promo-icon">
+            <Icon name="card" />
+          </span>
           <p>
             <strong>Open the customer card</strong>
             <span>See exactly what members see.</span>
@@ -83,7 +86,7 @@ export function AdminLayout() {
           </Link>
         </div>
         <div className="ad-side-foot">
-          <button className="ad-nav-link" onClick={adminSignOut} title={collapsed ? 'Log out' : undefined}>
+          <button className="ad-nav-link" onClick={() => void adminSignOut()} title={collapsed ? 'Log out' : undefined}>
             <Icon name="logout" />
             <span>Log out</span>
           </button>
@@ -121,6 +124,11 @@ export function AdminLayout() {
             </div>
           </div>
         </header>
+        {offline && (
+          <div className="offline-bar ad-offline" role="status">
+            <Icon name="refresh" /> Can't reach the server. Showing the last data; actions will fail until it's back.
+          </div>
+        )}
         <main className="ad-main">
           <Outlet />
         </main>

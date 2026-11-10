@@ -64,7 +64,7 @@ export async function qrToPngDataUrl(
   ctx.beginPath();
   ctx.arc(cx, cx, r * 1.15, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#d9617f';
+  ctx.fillStyle = '#ff66c4';
   for (let i = 0; i < 5; i++) {
     ctx.save();
     ctx.translate(cx, cx);
@@ -82,7 +82,7 @@ export async function qrToPngDataUrl(
   if (title) {
     ctx.fillStyle = fg;
     ctx.textAlign = 'center';
-    ctx.font = `600 ${size * 0.055}px Fraunces, Georgia, serif`;
+    ctx.font = `700 ${size * 0.05}px Poppins, sans-serif`;
     ctx.fillText(title, cx, size + footer * 0.38);
     if (subtitle) {
       ctx.globalAlpha = 0.6;

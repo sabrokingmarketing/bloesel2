@@ -2,8 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { BrandQR } from '../../components/BrandQR';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
-import { Logo } from '../../components/Logo';
-import { createCampaign, deleteCampaign, updateCampaign, useDB } from '../../data/store';
+import poppins500 from '@fontsource/poppins/files/poppins-latin-500-normal.woff2?url';
+import poppins700 from '@fontsource/poppins/files/poppins-latin-700-normal.woff2?url';
+import { Logo, LOGO_PATH, LOGO_VIEWBOX } from '../../components/Logo';
+import { campaignQrUrl, createCampaign, deleteCampaign, updateCampaign, useAdminDB, type ApiError } from '../../data/store';
 import type { Campaign, CampaignKind } from '../../data/types';
 import { shortDate } from '../../lib/format';
 import { absoluteUrl, downloadDataUrl, qrToPngDataUrl } from '../../lib/qr';
@@ -18,30 +20,38 @@ function slug(s: string) {
     .slice(0, 24);
 }
 
+const escapeHtml = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+
 async function printPoster(c: Campaign) {
-  const png = await qrToPngDataUrl(absoluteUrl(c.url), { size: 1000 });
+  const png = await qrToPngDataUrl(campaignQrUrl(c), { size: 1000 });
   const w = window.open('', '_blank', 'width=800,height=1000');
   if (!w) return false;
-  const headline = c.kind === 'join' ? 'Scan for your<br/><em>free 10th coffee</em>' : `Scan for<br/><em>${c.name}</em>`;
-  w.document.write(`<!doctype html><html><head><title>${c.name} · Bloeisel Koffie</title>
+  const name = escapeHtml(c.name);
+  const headline = c.kind === 'join' ? 'Scan for your<br/><em>free 10th coffee</em>' : `Scan for<br/><em>${name}</em>`;
+  // The poster window can't see the app's fonts, so it loads the same Poppins files directly.
+  const font = (url: string, weight: number) => `@font-face{font-family:Poppins;font-weight:${weight};src:url(${new URL(url, window.location.href)}) format('woff2')}`;
+  w.document.write(`<!doctype html><html><head><title>${name} · Bloeisel</title>
 <style>
+${font(poppins500, 500)}${font(poppins700, 700)}
 @page{size:A5;margin:0}
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .p{width:148mm;height:210mm;margin:0 auto;padding:14mm 12mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;
-background:radial-gradient(130% 80% at 50% 0%,#ea8ea4,#d9617f 45%,#9a3651);color:#fff}
-.b{font-family:Georgia,serif;font-style:italic;font-size:30px;font-weight:600;letter-spacing:-.5px}.b small{display:block;font-style:normal;font-family:Poppins,sans-serif;font-size:10px;letter-spacing:.42em;text-transform:uppercase;opacity:.85;margin-top:2px}
-h1{font-family:Georgia,serif;font-weight:600;font-size:40px;line-height:1.05;margin:0}h1 em{color:#fae0e6}
-.q{background:#fff;border-radius:28px;padding:16px;box-shadow:0 20px 40px -20px rgba(0,0,0,.4)}.q img{width:78mm;height:78mm;display:block}
-p{margin:0;font-size:13px;opacity:.9}
-</style></head><body><div class="p"><div class="b">Bloeisel<small>Koffie</small></div><h1>${headline}</h1><div class="q"><img src="${png}"/></div>
+background:radial-gradient(130% 80% at 50% 0%,#ff8fd3,#ff66c4 45%,#f24fb4);color:#1f1210}
+.logo{width:52mm;height:auto;color:#fff}
+h1{font-weight:700;font-size:38px;line-height:1.08;letter-spacing:-.03em;margin:0;text-transform:capitalize}h1 em{font-style:normal;color:#fff}
+.q{background:#fff;border-radius:28px;padding:16px;box-shadow:0 20px 40px -20px rgba(80,10,50,.45)}.q img{width:78mm;height:78mm;display:block}
+p{margin:0;font-size:13px;font-weight:500}
+</style></head><body><div class="p">
+<svg class="logo" viewBox="${LOGO_VIEWBOX}" role="img" aria-label="Bloeisel"><path d="${LOGO_PATH}" fill="currentColor" fill-rule="evenodd"/></svg>
+<h1>${headline}</h1><div class="q"><img src="${png}" alt="QR code"/></div>
 <p>Collect a sticker with every coffee.<br/>Ten stickers and the next cup is on us.</p></div>
-<script>window.onload=()=>setTimeout(()=>window.print(),250)</script></body></html>`);
+<script>document.fonts.ready.then(()=>setTimeout(()=>window.print(),250))</script></body></html>`);
   w.document.close();
   return true;
 }
 
 export function QRCodes() {
-  const db = useDB();
+  const db = useAdminDB();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState<Campaign | null>(null);
@@ -49,14 +59,14 @@ export function QRCodes() {
   const featured = db.campaigns.find((c) => c.kind === 'join' && c.active) ?? db.campaigns[0];
 
   const download = async (c: Campaign) => {
-    const png = await qrToPngDataUrl(absoluteUrl(c.url), { title: c.name, subtitle: 'Bloeisel Koffie · scan to collect stickers' });
+    const png = await qrToPngDataUrl(campaignQrUrl(c), { title: c.name, subtitle: 'Bloeisel Koffie · scan to collect stickers' });
     downloadDataUrl(png, `bloeisel-qr-${slug(c.name)}.png`);
     toast('QR code downloaded', 'download');
   };
 
   const copy = async (c: Campaign) => {
     try {
-      await navigator.clipboard.writeText(absoluteUrl(c.url));
+      await navigator.clipboard.writeText(campaignQrUrl(c));
       toast('Link copied', 'link');
     } catch {
       toast('Could not copy link', 'info');
@@ -101,7 +111,7 @@ export function QRCodes() {
                 Scan for your <em>free 10th coffee</em>
               </p>
               <div className="qrm-poster-qr">
-                <BrandQR value={absoluteUrl(featured.url)} label={`QR code for ${featured.name}`} />
+                <BrandQR value={campaignQrUrl(featured)} label={`QR code for ${featured.name}`} />
               </div>
             </div>
           </div>
@@ -112,7 +122,7 @@ export function QRCodes() {
         {db.campaigns.map((c) => (
           <article key={c.id} className={`card qr-tile ${c.active ? '' : 'is-off'}`}>
             <button className="qr-tile-art" onClick={() => setPreview(c)} aria-label={`Preview ${c.name}`}>
-              <BrandQR value={absoluteUrl(c.url)} label={`QR code for ${c.name}`} />
+              <BrandQR value={campaignQrUrl(c)} label={`QR code for ${c.name}`} />
               {!c.active && <span className="qr-tile-paused">Paused</span>}
             </button>
             <div className="qr-tile-body">
@@ -122,7 +132,7 @@ export function QRCodes() {
                   <p className="faint">{c.placement}</p>
                 </div>
                 <label className="switch" title={c.active ? 'Pause' : 'Activate'}>
-                  <input type="checkbox" checked={c.active} onChange={(e) => updateCampaign(c.id, { active: e.target.checked })} aria-label={`${c.name} active`} />
+                  <input type="checkbox" checked={c.active} onChange={(e) => updateCampaign(c.id, { active: e.target.checked }).catch((err: ApiError) => toast(err.message, 'info'))} aria-label={`${c.name} active`} />
                   <span />
                 </label>
               </div>
@@ -161,9 +171,9 @@ export function QRCodes() {
         {preview && (
           <div className="qr-preview">
             <div className="qr-preview-art">
-              <BrandQR value={absoluteUrl(preview.url)} label={`QR code for ${preview.name}`} />
+              <BrandQR value={campaignQrUrl(preview)} label={`QR code for ${preview.name}`} />
             </div>
-            <p className="faint qr-preview-url">{absoluteUrl(preview.url)}</p>
+            <p className="faint qr-preview-url">Opens {absoluteUrl(preview.url)}</p>
             <div className="qr-preview-stats">
               <span>
                 <strong className="tabular">{preview.scans}</strong> scans
@@ -176,11 +186,14 @@ export function QRCodes() {
               </button>
               <button
                 className="btn btn-danger"
-                onClick={() => {
-                  deleteCampaign(preview.id);
-                  setPreview(null);
-                  toast('QR code deleted', 'trash');
-                }}
+                onClick={() =>
+                  deleteCampaign(preview.id)
+                    .then(() => {
+                      setPreview(null);
+                      toast('QR code deleted', 'trash');
+                    })
+                    .catch((err: ApiError) => toast(err.message, 'info'))
+                }
               >
                 <Icon name="trash" /> Delete
               </button>
@@ -200,13 +213,22 @@ function NewCampaignSheet({ open, onClose }: { open: boolean; onClose: () => voi
   const [url, setUrl] = useState('');
   const [err, setErr] = useState('');
 
-  const finalUrl = kind === 'join' ? `/app/join?src=${slug(name) || 'new'}` : kind === 'menu' ? 'https://bloeiselkoffie.co.za' : url;
+  const [busy, setBusy] = useState(false);
+  const previewUrl = kind === 'custom' ? url || 'https://' : kind === 'menu' ? 'https://bloeiselkoffie.co.za' : '/app/join';
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return setErr('Give the code a name');
     if (kind === 'custom' && !/^https?:\/\/\S+\.\S+/.test(url)) return setErr('Enter a full link, starting with https://');
-    createCampaign({ name: name.trim(), placement: placement.trim() || 'Not placed yet', kind, url: finalUrl });
+    setBusy(true);
+    try {
+      await createCampaign({ name: name.trim(), placement: placement.trim(), kind, targetUrl: kind === 'custom' ? url.trim() : undefined });
+    } catch (error) {
+      setErr((error as ApiError).message);
+      return;
+    } finally {
+      setBusy(false);
+    }
     toast('QR code created', 'qr');
     setName('');
     setPlacement('');
@@ -219,7 +241,7 @@ function NewCampaignSheet({ open, onClose }: { open: boolean; onClose: () => voi
     <Sheet open={open} onClose={onClose} title="New QR code">
       <form className="new-qr" onSubmit={submit}>
         <div className="new-qr-preview">
-          <BrandQR value={absoluteUrl(finalUrl || '/')} label="Preview" />
+          <BrandQR value={absoluteUrl(previewUrl)} label="Preview" />
         </div>
         <div className="new-qr-fields">
           <div className="field">
@@ -247,7 +269,7 @@ function NewCampaignSheet({ open, onClose }: { open: boolean; onClose: () => voi
             </div>
           )}
           {err && <p className="field-error">{err}</p>}
-          <button className="btn btn-primary btn-block">
+          <button className="btn btn-primary btn-block" disabled={busy}>
             <Icon name="qr" /> Create QR code
           </button>
         </div>

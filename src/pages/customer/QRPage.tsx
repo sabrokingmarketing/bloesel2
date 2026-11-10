@@ -4,7 +4,7 @@ import { BrandQR } from '../../components/BrandQR';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
-import { addStamp, qrPayload, redeemReward, useDB, useSessionCustomer } from '../../data/store';
+import { qrPayload, useMe, useMeSync } from '../../data/store';
 import { firstName } from '../../lib/format';
 import { StampCelebration, useStampWatcher } from './StampCelebration';
 
@@ -27,26 +27,30 @@ function useWakeLock() {
 }
 
 export function QRPage() {
-  const db = useDB();
-  const customer = useSessionCustomer();
+  const me = useMe();
+  // Poll quickly while the QR is up: this is when the barista is stamping.
+  useMeSync(3_000);
+  const customer = me.data?.customer;
+  const settings = me.data?.settings;
   const navigate = useNavigate();
   const toast = useToast();
-  const event = useStampWatcher(customer, db.settings);
+  const event = useStampWatcher(customer, settings);
   const [copied, setCopied] = useState(false);
   useWakeLock();
 
   useEffect(() => {
     const meta = document.querySelector('meta[name="theme-color"]');
     const prev = meta?.getAttribute('content');
-    meta?.setAttribute('content', '#d9617f');
+    meta?.setAttribute('content', '#ff66c4');
     return () => {
       if (prev) meta?.setAttribute('content', prev);
     };
   }, []);
 
-  if (!customer) return <Navigate to="/app/join" replace />;
+  if (me.status === 'none') return <Navigate to="/app/join" replace />;
+  if (!customer || !settings) return <div className="page-loading qr-loading" aria-label="Loading your QR code" />;
 
-  const max = db.settings.stampsRequired;
+  const max = settings.stampsRequired;
   const complete = customer.stamps >= max;
 
   const copy = async () => {
@@ -57,11 +61,6 @@ export function QRPage() {
     } catch {
       toast('Could not copy, read the code out instead', 'info');
     }
-  };
-
-  const simulate = () => {
-    if (complete) redeemReward(customer.id);
-    else addStamp(customer.id, customer.favourite ?? 'Cappuccino');
   };
 
   return (
@@ -142,13 +141,14 @@ export function QRPage() {
           <Link to="/app" className="btn btn-white btn-block">
             <Icon name="card" /> Back to my card
           </Link>
-          <button className="qr-demo" onClick={simulate}>
-            Demo: simulate the barista {complete ? 'redeeming' : 'scanning'}
-          </button>
+          <p className="qr-live" role="status">
+            <span className={`qr-live-dot ${me.offline ? 'is-off' : ''}`} />
+            {me.offline ? 'Offline. Your card will update when you reconnect.' : 'Live. Your card updates the moment it is stamped.'}
+          </p>
         </div>
       </main>
 
-      <StampCelebration event={event} customer={customer} settings={db.settings} />
+      <StampCelebration event={event} customer={customer} settings={settings} />
     </div>
   );
 }
