@@ -59,6 +59,14 @@ p {
 }
 
 /* ---------- Typography ---------- */
+/* Headings use Title Case: the first letter of every word is a capital. */
+h1,
+h2,
+h3,
+.card-title,
+.sheet-title {
+  text-transform: capitalize;
+}
 .display {
   font-family: var(--font-display);
   font-optical-sizing: auto;
