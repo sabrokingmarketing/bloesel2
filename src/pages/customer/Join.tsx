@@ -58,7 +58,7 @@ export function Join() {
           </div>
           <div className="join-art-copy">
             <h2 className="display">
-              Ten stickers. <span className="display-italic">One free cup.</span>
+              Ten stickers. <span className="heading-accent">One free cup.</span>
             </h2>
             <p>Your Bloeisel card lives on your phone. Nothing to download, nothing to lose.</p>
           </div>

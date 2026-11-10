@@ -301,7 +301,7 @@
   font-size: clamp(1.45rem, 6.2vw, 2.4rem);
   color: var(--espresso-900);
 }
-.cx-hero-title .display-italic {
+.cx-hero-title .heading-accent {
   color: var(--rose-600);
 }
 .cx-hero-art {
@@ -982,6 +982,9 @@
   .join-art-copy h2 {
     font-size: var(--fs-40);
     max-width: 14ch;
+  }
+  .join-art-copy .heading-accent {
+    color: #fff;
   }
   .join-art-copy p {
     margin-top: var(--s-3);

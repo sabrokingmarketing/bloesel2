@@ -56,7 +56,7 @@ export function AdminLogin() {
           <CoffeeBreak />
         </div>
         <p className="display ad-login-quote">
-          Pour with love. <span className="display-italic">Stamp with joy.</span>
+          Pour with love. <span className="heading-accent">Stamp with joy.</span>
         </p>
       </section>
       <section className="ad-login-panel">

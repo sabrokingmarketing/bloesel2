@@ -59,27 +59,37 @@ p {
 }
 
 /* ---------- Typography ---------- */
-/* Headings use Title Case: the first letter of every word is a capital. */
+/* Headings and anything you can press use Title Case: every word starts with a capital. */
 h1,
 h2,
 h3,
 .card-title,
-.sheet-title {
+.sheet-title,
+.btn,
+.link,
+.segmented button,
+.fchip,
+.drink-pick button,
+.ad-nav-link,
+.cx-topnav-link,
+.cx-tab,
+.cx-tab-qr,
+.settings-row,
+.portal-card strong,
+.quick-pick strong,
+.qrm-poster-inner p,
+.ad-side-promo strong {
   text-transform: capitalize;
 }
 .display {
   font-family: var(--font-display);
-  font-optical-sizing: auto;
-  font-variation-settings: 'SOFT' 100, 'WONK' 0;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
 }
-.display-italic {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-variation-settings: 'SOFT' 100, 'WONK' 1;
-  font-weight: 500;
+/* Highlighted word inside a heading: same font and weight, brand colour. */
+.heading-accent {
+  color: var(--rose-600);
 }
 .eyebrow {
   font-size: var(--fs-11);

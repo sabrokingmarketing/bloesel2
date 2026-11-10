@@ -484,7 +484,7 @@
     font-size: var(--fs-40);
     max-width: 14ch;
   }
-  .ad-login-quote .display-italic {
+  .ad-login-quote .heading-accent {
     color: var(--rose-300);
   }
   .ad-login-mobile-logo {

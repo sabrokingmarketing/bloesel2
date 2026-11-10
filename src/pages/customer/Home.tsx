@@ -18,7 +18,7 @@ export function Home() {
         <div className="cx-hero-copy">
           <p className="eyebrow cx-hero-eyebrow">{greeting()}</p>
           <h1 className="display cx-hero-title">
-            {firstName(customer.name)}, time for a <span className="display-italic">koffie</span> break?
+            {firstName(customer.name)}, time for a <span className="heading-accent">koffie</span> break?
           </h1>
         </div>
         <div className="cx-hero-art">

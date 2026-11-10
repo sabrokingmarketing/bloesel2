@@ -82,7 +82,7 @@ export async function qrToPngDataUrl(
   if (title) {
     ctx.fillStyle = fg;
     ctx.textAlign = 'center';
-    ctx.font = `600 ${size * 0.055}px Fraunces, Georgia, serif`;
+    ctx.font = `700 ${size * 0.05}px Poppins, sans-serif`;
     ctx.fillText(title, cx, size + footer * 0.38);
     if (subtitle) {
       ctx.globalAlpha = 0.6;

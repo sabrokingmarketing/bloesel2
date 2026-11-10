@@ -64,7 +64,8 @@
   --danger-soft: #fbe5e2;
 
   /* Type */
-  --font-display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
+  /* One typeface across the product: Poppins for headings and UI alike. */
+  --font-display: var(--font-ui);
   --font-ui: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --fs-11: 0.6875rem;

@@ -2,7 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { BrandQR } from '../../components/BrandQR';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
-import { Logo } from '../../components/Logo';
+import poppins500 from '@fontsource/poppins/files/poppins-latin-500-normal.woff2?url';
+import poppins700 from '@fontsource/poppins/files/poppins-latin-700-normal.woff2?url';
+import { Logo, LOGO_PATH, LOGO_VIEWBOX } from '../../components/Logo';
 import { campaignQrUrl, createCampaign, deleteCampaign, updateCampaign, useAdminDB, type ApiError } from '../../data/store';
 import type { Campaign, CampaignKind } from '../../data/types';
 import { shortDate } from '../../lib/format';
@@ -18,24 +20,32 @@ function slug(s: string) {
     .slice(0, 24);
 }
 
+const escapeHtml = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+
 async function printPoster(c: Campaign) {
   const png = await qrToPngDataUrl(campaignQrUrl(c), { size: 1000 });
   const w = window.open('', '_blank', 'width=800,height=1000');
   if (!w) return false;
-  const headline = c.kind === 'join' ? 'Scan for your<br/><em>free 10th coffee</em>' : `Scan for<br/><em>${c.name}</em>`;
-  w.document.write(`<!doctype html><html><head><title>${c.name} · Bloeisel Koffie</title>
+  const name = escapeHtml(c.name);
+  const headline = c.kind === 'join' ? 'Scan for your<br/><em>free 10th coffee</em>' : `Scan for<br/><em>${name}</em>`;
+  // The poster window can't see the app's fonts, so it loads the same Poppins files directly.
+  const font = (url: string, weight: number) => `@font-face{font-family:Poppins;font-weight:${weight};src:url(${new URL(url, window.location.href)}) format('woff2')}`;
+  w.document.write(`<!doctype html><html><head><title>${name} · Bloeisel</title>
 <style>
+${font(poppins500, 500)}${font(poppins700, 700)}
 @page{size:A5;margin:0}
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .p{width:148mm;height:210mm;margin:0 auto;padding:14mm 12mm;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;
-background:radial-gradient(130% 80% at 50% 0%,#ff8fd3,#ff66c4 45%,#a8246f);color:#fff}
-.b{font-family:Georgia,serif;font-style:italic;font-size:30px;font-weight:600;letter-spacing:-.5px}.b small{display:block;font-style:normal;font-family:Poppins,sans-serif;font-size:10px;letter-spacing:.42em;text-transform:uppercase;opacity:.85;margin-top:2px}
-h1{font-family:Georgia,serif;font-weight:600;font-size:40px;line-height:1.05;margin:0}h1 em{color:#ffdcf0}
-.q{background:#fff;border-radius:28px;padding:16px;box-shadow:0 20px 40px -20px rgba(0, 0, 0,.4)}.q img{width:78mm;height:78mm;display:block}
-p{margin:0;font-size:13px;opacity:.9}
-</style></head><body><div class="p"><div class="b">Bloeisel<small>Koffie</small></div><h1>${headline}</h1><div class="q"><img src="${png}"/></div>
+background:radial-gradient(130% 80% at 50% 0%,#ff8fd3,#ff66c4 45%,#f24fb4);color:#1f1210}
+.logo{width:52mm;height:auto;color:#fff}
+h1{font-weight:700;font-size:38px;line-height:1.08;letter-spacing:-.03em;margin:0;text-transform:capitalize}h1 em{font-style:normal;color:#fff}
+.q{background:#fff;border-radius:28px;padding:16px;box-shadow:0 20px 40px -20px rgba(80,10,50,.45)}.q img{width:78mm;height:78mm;display:block}
+p{margin:0;font-size:13px;font-weight:500}
+</style></head><body><div class="p">
+<svg class="logo" viewBox="${LOGO_VIEWBOX}" role="img" aria-label="Bloeisel"><path d="${LOGO_PATH}" fill="currentColor" fill-rule="evenodd"/></svg>
+<h1>${headline}</h1><div class="q"><img src="${png}" alt="QR code"/></div>
 <p>Collect a sticker with every coffee.<br/>Ten stickers and the next cup is on us.</p></div>
-<script>window.onload=()=>setTimeout(()=>window.print(),250)</script></body></html>`);
+<script>document.fonts.ready.then(()=>setTimeout(()=>window.print(),250))</script></body></html>`);
   w.document.close();
   return true;
 }
