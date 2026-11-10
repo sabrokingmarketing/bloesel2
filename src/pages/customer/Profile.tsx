@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
-import { signOut, updateProfile } from '../../data/store';
+import { findByPhone, phoneKey, signOut, updateProfile } from '../../data/store';
 import { initials, shortDate } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
 
@@ -18,6 +18,9 @@ export function Profile() {
   const save = (e: FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return toast('Please add your name', 'info');
+    // The phone number is how members find their card again, so it must stay valid and unique.
+    if (!phoneKey(phone)) return toast('Enter a valid mobile number', 'info');
+    if (findByPhone(phone, customer.id)) return toast('That number is already linked to another card', 'info');
     updateProfile(customer.id, { name: name.trim(), phone: phone.trim(), email: email.trim() || undefined });
     toast('Profile saved');
   };

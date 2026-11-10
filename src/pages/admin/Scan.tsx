@@ -72,17 +72,34 @@ export function Scan() {
     setCam((s) => (s === 'live' || s === 'starting' ? 'idle' : s));
   }, []);
 
-  useEffect(() => stop, [stop]);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      stop();
+    };
+  }, [stop]);
 
   const start = async () => {
     if (!navigator.mediaDevices?.getUserMedia) return setCam('unsupported');
     setCam('starting');
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
+      const v = videoRef.current;
+      // Permission can be granted after staff have left the scanner: never leave that camera running.
+      if (!mountedRef.current || !v) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
-      const v = videoRef.current!;
       v.srcObject = stream;
       await v.play();
+      if (!mountedRef.current) {
+        stop();
+        return;
+      }
       setCam('live');
       let busy = false;
       let lastHit = '';
@@ -108,7 +125,9 @@ export function Scan() {
       };
       tick();
     } catch {
-      setCam('denied');
+      stream?.getTracks().forEach((t) => t.stop());
+      if (streamRef.current === stream) streamRef.current = null;
+      if (mountedRef.current) setCam('denied');
     }
   };
 

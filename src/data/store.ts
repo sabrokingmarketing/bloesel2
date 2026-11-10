@@ -162,10 +162,16 @@ export function createCustomer(input: { name: string; phone: string; email?: str
   return c;
 }
 
-export function findByPhone(phone: string) {
-  const digits = phone.replace(/\D/g, '').slice(-9);
-  if (digits.length < 9) return undefined;
-  return state.customers.find((c) => c.phone.replace(/\D/g, '').endsWith(digits));
+/** Last nine digits: matches "+27 82 123 4567" and "082 123 4567" alike. */
+export function phoneKey(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  return digits.length >= 9 ? digits.slice(-9) : null;
+}
+
+export function findByPhone(phone: string, exceptId?: string) {
+  const key = phoneKey(phone);
+  if (!key) return undefined;
+  return state.customers.find((c) => c.id !== exceptId && phoneKey(c.phone) === key);
 }
 
 function updateCustomer(id: string, fn: (c: Customer) => Customer, act?: Omit<Activity, 'id' | 'at' | 'customerId'>) {
@@ -217,19 +223,23 @@ export function redeemReward(customerId: string) {
 
 export function adjustStamps(customerId: string, delta: number, note?: string) {
   const max = state.settings.stampsRequired;
+  const c = state.customers.find((x) => x.id === customerId);
+  if (!c) return;
+  // A card can hold more than the threshold if it was lowered later; only additions are capped,
+  // and never below the balance the card already has.
+  const ceiling = Math.max(max, c.stamps);
+  const stamps = Math.max(0, Math.min(ceiling, c.stamps + delta));
+  const applied = stamps - c.stamps;
+  if (applied === 0) return;
   updateCustomer(
     customerId,
-    (x) => {
-      const stamps = Math.max(0, Math.min(max, x.stamps + delta));
-      const applied = stamps - x.stamps;
-      return {
-        ...x,
-        stamps,
-        totalStamps: Math.max(0, x.totalStamps + applied),
-        rewardsEarned: x.rewardsEarned + (stamps === max && x.stamps < max ? 1 : 0),
-      };
-    },
-    { type: 'adjust', delta, note },
+    (x) => ({
+      ...x,
+      stamps,
+      totalStamps: Math.max(0, x.totalStamps + applied),
+      rewardsEarned: x.rewardsEarned + (stamps >= max && x.stamps < max ? 1 : 0),
+    }),
+    { type: 'adjust', delta: applied, note },
   );
 }
 
