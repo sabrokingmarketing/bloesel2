@@ -116,15 +116,6 @@
 .slot-cup {
   fill: var(--latte-300);
 }
-.slot-num {
-  position: absolute;
-  right: 4%;
-  bottom: 2%;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-}
 .sticker-slot.is-reward .slot-ring {
   fill: #fdf5e8;
   stroke: var(--caramel-400);
@@ -183,7 +174,7 @@
   gap: var(--s-3);
   padding: 18px 20px;
   background: linear-gradient(120deg, var(--rose-500) 0%, var(--rose-400) 55%, #ff8fd3 100%);
-  color: var(--on-pink);
+  color: #fff;
   overflow: hidden;
 }
 .lc-pattern {
@@ -199,6 +190,7 @@
   position: relative;
 }
 .lc-member {
+  text-shadow: 0 1px 2px rgba(140, 31, 94, 0.45);
   display: grid;
   text-align: right;
   line-height: 1.2;

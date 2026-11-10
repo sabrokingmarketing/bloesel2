@@ -66,13 +66,11 @@ export function Sticker({ index, filled, isReward = false, isNew = false, size =
             </g>
           )}
         </svg>
-        {isReward ? (
+        {isReward && (
           <>
             <Icon name="gift" className="slot-gift" />
             <span className="slot-free">Free</span>
           </>
-        ) : (
-          <span className="slot-num">{index + 1}</span>
         )}
       </div>
     );
