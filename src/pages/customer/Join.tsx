@@ -4,7 +4,7 @@ import { CoffeeBreak } from '../../components/CoffeeBreak';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
-import { ApiError, joinProgramme, useMe } from '../../data/store';
+import { ApiError, getPendingCounterCode, joinProgramme, useMe } from '../../data/store';
 
 const validPhone = (p: string) => {
   const d = p.replace(/\D/g, '');
@@ -23,7 +23,8 @@ export function Join() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  if (me.status === 'ready') return <Navigate to="/app" replace />;
+  const collecting = !!getPendingCounterCode();
+  if (me.status === 'ready') return <Navigate to={collecting ? '/app/stamp' : '/app'} replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,8 +38,13 @@ export function Join() {
     setBusy(true);
     try {
       await joinProgramme({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined, marketingOptIn: consent });
-      toast('Your card is ready. First sticker at the till!', 'sparkle');
-      navigate('/app');
+      if (collecting) {
+        // They scanned the counter QR before having a card: collect that sticker now.
+        navigate('/app/stamp');
+      } else {
+        toast('Your card is ready. First sticker at the till!', 'sparkle');
+        navigate('/app');
+      }
     } catch (err) {
       const e = err as ApiError;
       if (e.code === 'phone_taken') setErrors({ phone: e.message });
@@ -82,7 +88,11 @@ export function Join() {
           {mode === 'join' ? (
             <>
               <h1 className="display join-title">Start your card</h1>
-              <p className="muted join-lede">It takes ten seconds. Your first sticker is waiting at the counter.</p>
+              <p className="muted join-lede">
+                {collecting
+                  ? 'Create your card in ten seconds and today’s sticker goes straight onto it.'
+                  : 'It takes ten seconds. Your first sticker is waiting at the counter.'}
+              </p>
 
               <form className="join-form" onSubmit={submit} noValidate>
                 <div className="field">

@@ -7,7 +7,7 @@
  * up almost immediately. Staff screens poll a snapshot.
  */
 import { useEffect, useSyncExternalStore } from 'react';
-import type { Activity, Campaign, CampaignKind, Customer, DB, Settings } from './types';
+import type { Activity, Campaign, CampaignKind, CounterSettings, Customer, DB, Settings } from './types';
 
 /* ======================= HTTP ======================= */
 
@@ -191,6 +191,39 @@ export async function removeCardFromDevice() {
   setMe({ status: 'none', data: undefined });
 }
 
+/* ---------- Counter QR: the customer scans to collect a sticker ---------- */
+
+const PENDING_KEY = 'bloeisel.pendingCounterCode';
+
+/** Remembers a scanned counter code while a first-time customer signs up. */
+export function setPendingCounterCode(code: string | null) {
+  try {
+    if (code) sessionStorage.setItem(PENDING_KEY, code);
+    else sessionStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+export function getPendingCounterCode() {
+  try {
+    return sessionStorage.getItem(PENDING_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function counterStamp(code: string, idempotencyKey: string) {
+  const res = await api<{ customer: Customer; completed: boolean }>('POST', '/api/me/counter-stamp', { code, idempotencyKey }, { device: true });
+  if (me.data) setMe({ data: { ...me.data, customer: res.customer } });
+  void refreshMe();
+  return res;
+}
+
+/** What the printed counter QR encodes. The code rides in the fragment, so it never lands in server logs. */
+export function counterQrUrl(code: string) {
+  return `${window.location.origin}/app/stamp#c=${code}`;
+}
+
 export function claimUrl(token: string) {
   // The token travels in the fragment, so it never reaches server logs or referrers.
   return `${window.location.origin}/app/claim#${token}`;
@@ -314,6 +347,12 @@ export async function updateCampaign(id: string, patch: Partial<Pick<Campaign, '
 export async function deleteCampaign(id: string) {
   await api('DELETE', `/api/admin/campaigns/${id}`);
   if (admin.db) setAdmin({ db: { ...admin.db, campaigns: admin.db.campaigns.filter((c) => c.id !== id) } });
+}
+
+export async function updateCounter(patch: Partial<Pick<CounterSettings, 'enabled' | 'cooldownMinutes'>> & { replaceCode?: boolean }) {
+  const { counter } = await api<{ counter: CounterSettings }>('PATCH', '/api/admin/counter', patch);
+  if (admin.db) setAdmin({ db: { ...admin.db, counter } });
+  return counter;
 }
 
 /** The address printed on a campaign's QR code. Scans are counted server-side before redirecting. */

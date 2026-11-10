@@ -5,7 +5,7 @@ import { isDeployed, SetupError } from './env.js';
  * so concurrent cold starts can't race each other.
  */
 import type { Db } from './db.js';
-import { hashPin } from './security.js';
+import { hashPin, newCounterCode } from './security.js';
 
 const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
   {
@@ -90,6 +90,16 @@ const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
       CREATE INDEX rate_events_bucket_at ON rate_events (bucket, at);
     `,
   },
+  {
+    id: 2,
+    name: 'counter_qr',
+    sql: `
+      ALTER TABLE settings ADD COLUMN counter_code text;
+      ALTER TABLE settings ADD COLUMN self_scan_enabled boolean NOT NULL DEFAULT true;
+      ALTER TABLE settings ADD COLUMN self_scan_cooldown_minutes integer NOT NULL DEFAULT 180
+        CHECK (self_scan_cooldown_minutes BETWEEN 0 AND 1440)
+    `,
+  }
 ];
 
 let ready: Promise<void> | null = null;
@@ -132,5 +142,7 @@ async function migrate(db: Db) {
         [await hashPin(pin ?? '1234')],
       );
     }
+    // The printed counter QR carries this code. It is random, and staff can replace it at any time.
+    await q.query('UPDATE settings SET counter_code = $1 WHERE id = 1 AND counter_code IS NULL', [newCounterCode()]);
   });
 }

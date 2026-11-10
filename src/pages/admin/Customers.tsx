@@ -275,7 +275,7 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
                   <Icon name={a.type === 'stamp' ? 'plus' : a.type === 'redeem' ? 'gift' : a.type === 'join' ? 'sparkle' : 'edit'} />
                 </span>
                 <span className="csheet-act-text">
-                  {a.type === 'stamp' && `Sticker · ${a.drink ?? 'Coffee'}`}
+                  {a.type === 'stamp' && `Sticker · ${a.note === 'Counter QR' ? 'Counter QR' : a.drink ?? 'Coffee'}`}
                   {a.type === 'redeem' && 'Redeemed free coffee'}
                   {a.type === 'join' && 'Joined the programme'}
                   {a.type === 'adjust' && `Adjusted ${a.delta && a.delta > 0 ? '+' : ''}${a.delta}${a.note ? ` · ${a.note}` : ''}`}

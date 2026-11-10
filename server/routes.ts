@@ -24,6 +24,8 @@ import {
   hitRateLimit,
   issueStaffSession,
   memberCode,
+  newCounterCode,
+  safeEqual,
   newToken,
   phoneKey,
   STAFF_COOKIE,
@@ -77,7 +79,19 @@ function toCampaign(r: Row): Campaign {
   };
 }
 
-type SettingsRow = { store_name: string; stamps_required: number; reward_name: string; admin_pin_hash: string };
+type SettingsRow = {
+  store_name: string;
+  stamps_required: number;
+  reward_name: string;
+  admin_pin_hash: string;
+  counter_code: string;
+  self_scan_enabled: boolean;
+  self_scan_cooldown_minutes: number;
+};
+
+function toCounter(r: SettingsRow) {
+  return { code: r.counter_code, enabled: Boolean(r.self_scan_enabled), cooldownMinutes: Number(r.self_scan_cooldown_minutes) };
+}
 
 function toSettings(r: SettingsRow): Settings {
   return { storeName: r.store_name, stampsRequired: Number(r.stamps_required), rewardName: r.reward_name };
@@ -222,7 +236,8 @@ route('GET', '/api/config', async (_ctx, db) => json(toSettings(await loadSettin
 
 route('POST', '/api/join', async (ctx, db) => {
   const input = await body(ctx, z.object({ name, phone, email, marketingOptIn: z.boolean().optional() }));
-  if (await hitRateLimit(db, `join:${ctx.ip}`, 10, 3600)) throw tooMany('Too many sign-ups from this network. Try again later.');
+  // Generous: everyone on the café's Wi-Fi shares one address. This only stops scripted mass sign-ups.
+  if (await hitRateLimit(db, `join:${ctx.ip}`, 60, 3600)) throw tooMany('Too many sign-ups from this network. Try again later.');
   const key = phoneKey(input.phone)!;
   return db.tx(async (q) => {
     const [taken] = await q.query('SELECT 1 FROM customers WHERE phone_key = $1', [key]);
@@ -273,6 +288,44 @@ route('DELETE', '/api/me/device', async (ctx, db) => {
   const { tokenHash } = await requireCustomer(ctx, db);
   await db.query('DELETE FROM device_tokens WHERE token_hash = $1', [tokenHash]);
   return json({ ok: true });
+});
+
+/**
+ * The customer scanned the printed counter QR. The code proves they saw the
+ * poster; the per-card time limit stops a photo of it being farmed from home.
+ */
+route('POST', '/api/me/counter-stamp', async (ctx, db) => {
+  const { customer } = await requireCustomer(ctx, db);
+  const input = await body(ctx, z.object({ code: z.string().min(10).max(60), idempotencyKey }));
+  // Shared café Wi-Fi again; the per-card time limit is the real guard.
+  if (await hitRateLimit(db, `counter:${ctx.ip}`, 300, 3600)) throw tooMany('Too many scans from this network. Ask your barista instead.');
+  const s = await loadSettings(db);
+  if (!s.self_scan_enabled) throw new HttpError(403, 'self_scan_off', 'Scanning at the counter is switched off right now. Show your QR to the barista instead.');
+  if (!safeEqual(input.code, s.counter_code)) {
+    throw new HttpError(403, 'bad_code', 'This counter code has been replaced. Scan the QR code at the counter, or show your QR to the barista.');
+  }
+  const cooldown = Number(s.self_scan_cooldown_minutes);
+  const res = await mutateCard(db, String(customer.id), input.idempotencyKey, (c, max) => {
+    if (Number(c.stamps) >= max) return conflict('Your card is full. Show your QR to the barista to claim your free coffee.', 'card_full');
+    const last = c.last_visit ? new Date(String(c.last_visit)).getTime() : 0;
+    const nextAt = last + cooldown * 60_000;
+    if (cooldown > 0 && nextAt > Date.now()) {
+      const mins = Math.ceil((nextAt - Date.now()) / 60_000);
+      const wait = mins >= 60 ? `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''}` : `${mins} min`;
+      return new HttpError(429, 'too_soon', `You already collected a sticker on this visit. Your next one is ready in ${wait}.`);
+    }
+    const stamps = Number(c.stamps);
+    return {
+      set: {
+        stamps: stamps + 1,
+        total_stamps: Number(c.total_stamps) + 1,
+        rewards_earned: Number(c.rewards_earned) + (stamps + 1 === max ? 1 : 0),
+        last_visit: new Date(),
+      },
+      activity: { type: 'stamp', note: 'Counter QR' },
+    };
+  });
+  return json({ ...res, completed: res.customer.stamps >= Number(s.stamps_required) });
 });
 
 route('POST', '/api/claim', async (ctx, db) => {
@@ -337,6 +390,7 @@ route('GET', '/api/admin/snapshot', async (ctx, db) => {
     activity: activity.map(toActivity),
     campaigns: campaigns.map(toCampaign),
     settings: toSettings(s),
+    counter: toCounter(s),
   });
 });
 
@@ -498,6 +552,22 @@ route('PATCH', '/api/admin/settings', async (ctx, db) => {
     ctx.setHeaders.append('set-cookie', cookie(STAFF_COOKIE, session.value, session.maxAge));
   }
   return json({ settings: toSettings(row!) });
+});
+
+route('PATCH', '/api/admin/counter', async (ctx, db) => {
+  await requireStaff(ctx, db);
+  const input = await body(
+    ctx,
+    z.object({ enabled: z.boolean().optional(), cooldownMinutes: z.number().int().min(0).max(1440).optional(), replaceCode: z.boolean().optional() }),
+  );
+  const [row] = await db.query<SettingsRow>(
+    `UPDATE settings SET self_scan_enabled = coalesce($1, self_scan_enabled),
+       self_scan_cooldown_minutes = coalesce($2, self_scan_cooldown_minutes),
+       counter_code = coalesce($3, counter_code), updated_at = now()
+     WHERE id = 1 RETURNING *`,
+    [input.enabled ?? null, input.cooldownMinutes ?? null, input.replaceCode ? newCounterCode() : null],
+  );
+  return json({ counter: toCounter(row!) });
 });
 
 /* ---------- Printed QR codes ---------- */

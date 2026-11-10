@@ -48,8 +48,12 @@ export type Settings = {
   rewardName: string;
 };
 
+/** The printed counter QR that customers scan to collect a sticker themselves. */
+export type CounterSettings = { code: string; enabled: boolean; cooldownMinutes: number };
+
 /** Everything the staff portal works from (GET /api/admin/snapshot). */
 export type DB = {
+  counter: CounterSettings;
   customers: Customer[];
   activity: Activity[];
   campaigns: Campaign[];

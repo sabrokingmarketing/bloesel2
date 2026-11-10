@@ -1603,3 +1603,34 @@
   gap: var(--s-3);
   justify-content: flex-end;
 }
+
+/* =========================================================
+   Counter QR result (/app/stamp)
+   ========================================================= */
+.counter {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s-6);
+  padding: calc(var(--s-6) + var(--safe-top)) var(--s-5) var(--s-8);
+  background: radial-gradient(120% 60% at 50% 0%, var(--blush-100), var(--bg) 70%);
+}
+.counter-card {
+  width: min(400px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  text-align: center;
+  padding: var(--s-8) var(--s-6) var(--s-6);
+}
+.counter-card h1 {
+  font-size: var(--fs-32);
+}
+.counter-card .btn {
+  margin-top: var(--s-3);
+}
+.counter-sticker {
+  width: 130px;
+  margin-bottom: var(--s-2);
+}
