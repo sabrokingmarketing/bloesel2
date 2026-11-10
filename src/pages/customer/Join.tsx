@@ -42,7 +42,7 @@ export function Join() {
         // They scanned the counter QR before having a card: collect that sticker now.
         navigate('/app/stamp');
       } else {
-        toast('Your card is ready. First sticker at the till!', 'sparkle');
+        toast('Your card is ready! Scan the QR by the till for your first sticker.', 'sparkle');
         navigate('/app');
       }
     } catch (err) {

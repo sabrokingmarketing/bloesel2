@@ -32,12 +32,24 @@ export function Home() {
             My loyalty card
           </h2>
           <LoyaltyCard customer={customer} settings={settings} newIndex={newIndex} />
-          <Link to={complete ? '/app/rewards' : '/app/qr'} className={`btn btn-lg btn-block btn-cta cx-card-cta ${complete ? 'btn-dark' : 'btn-primary'}`}>
-            {complete ? 'Claim my free coffee' : 'Show my QR to collect'}
-            <span className="btn-orb">
-              <Icon name={complete ? 'gift' : 'qr'} />
-            </span>
-          </Link>
+          {complete ? (
+            <Link to="/app/rewards" className="btn btn-lg btn-block btn-cta btn-dark cx-card-cta">
+              Claim my free coffee
+              <span className="btn-orb">
+                <Icon name="gift" />
+              </span>
+            </Link>
+          ) : (
+            <div className="scan-hint">
+              <span className="scan-hint-icon">
+                <Icon name="camera" />
+              </span>
+              <p>
+                <strong>Collect a sticker</strong>
+                <span>After you pay, point your phone camera at the QR code by the till.</span>
+              </p>
+            </div>
+          )}
         </section>
 
         <aside className="cx-side">
@@ -58,8 +70,8 @@ export function Home() {
               <li>
                 <span className="step-num">2</span>
                 <div>
-                  <strong>Show your QR</strong>
-                  <p>Your barista scans it at the till.</p>
+                  <strong>Scan the counter QR</strong>
+                  <p>Point your phone camera at the code by the till.</p>
                 </div>
               </li>
               <li>
