@@ -1668,7 +1668,7 @@
   font-weight: 600;
   text-transform: capitalize;
 }
-.scan-hint span {
+.scan-hint p span {
   font-size: var(--fs-13);
   color: var(--ink-soft);
 }
