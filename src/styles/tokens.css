@@ -1,0 +1,114 @@
+/*
+ * Bloeisel Koffie design system tokens.
+ *
+ * Direction: "blossom & espresso". Warm cream paper, blush and rose pinks
+ * (the blossom in "Bloeisel"), deep espresso ink, with caramel as the
+ * sparing reward accent. Derived from the reference set: terracotta/blush
+ * dashboard surfaces and the cream + espresso loyalty card.
+ *
+ * Every brand colour lives here. To match the live brand exactly, change the
+ * values in this block only.
+ */
+:root {
+  /* Brand: pink */
+  --blush-25: #fff8f9;
+  --blush-50: #fdf0f2;
+  --blush-100: #fae0e6;
+  --blush-200: #f5c7d2;
+  --rose-300: #ee9fb3;
+  --rose-400: #e47f99;
+  --rose-500: #d9617f; /* primary */
+  --rose-600: #bf4867;
+  --rose-700: #9a3651;
+
+  /* Brand: coffee */
+  --espresso-950: #1f1210;
+  --espresso-900: #2e1a16;
+  --espresso-800: #3e241e;
+  --espresso-700: #553228;
+  --cocoa-500: #8c5d4d;
+  --cocoa-400: #a9806f;
+  --latte-300: #d9c0b0;
+  --latte-200: #eadbd0;
+
+  /* Accent: caramel (rewards only) */
+  --caramel-300: #f2d29e;
+  --caramel-400: #e8b974;
+  --caramel-500: #d49a4c;
+
+  /* Surfaces */
+  --cream: #fbf4ef;
+  --cream-deep: #f5e9e2;
+  --paper: #fffcfa;
+  --white: #ffffff;
+
+  /* Semantic */
+  --bg: var(--cream);
+  --surface: var(--paper);
+  --surface-sunken: var(--cream-deep);
+  --ink: var(--espresso-900);
+  --ink-soft: #6e5249;
+  --ink-faint: #a58e85;
+  --line: #eddfd8;
+  --line-strong: #e0cbc2;
+  --primary: var(--rose-500);
+  --primary-strong: var(--rose-600);
+  --primary-soft: var(--blush-100);
+  --on-primary: #fff;
+  --success: #4f8a63;
+  --success-soft: #e3f0e6;
+  --danger: #c2483f;
+  --danger-soft: #fbe5e2;
+
+  /* Type */
+  --font-display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --fs-11: 0.6875rem;
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-18: 1.125rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-32: 2rem;
+  --fs-40: 2.5rem;
+  --fs-56: 3.5rem;
+
+  /* Spacing (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* Radii */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-pill: 999px;
+
+  /* Shadows: warm-tinted, never grey */
+  --shadow-xs: 0 1px 2px rgba(62, 36, 30, 0.06);
+  --shadow-sm: 0 1px 2px rgba(62, 36, 30, 0.05), 0 4px 12px -4px rgba(62, 36, 30, 0.08);
+  --shadow-md: 0 2px 4px rgba(62, 36, 30, 0.04), 0 14px 32px -12px rgba(62, 36, 30, 0.16);
+  --shadow-lg: 0 4px 8px rgba(62, 36, 30, 0.04), 0 28px 60px -20px rgba(62, 36, 30, 0.28);
+  --shadow-rose: 0 10px 28px -10px rgba(191, 72, 103, 0.55);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 160ms;
+  --dur: 260ms;
+  --dur-slow: 480ms;
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
