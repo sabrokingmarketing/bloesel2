@@ -3,118 +3,118 @@ import { CoffeeBreak } from '../../components/CoffeeBreak';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { MiniSticker } from '../../components/Sticker';
-import { firstName, greeting, timeAgo } from '../../lib/format';
+import { firstName, timeAgo } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
+
+const today = () => new Date().toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' });
 
 export function Home() {
   const { customer, activity, settings, newIndex } = useCustomerCtx();
   const max = settings.stampsRequired;
   const complete = customer.stamps >= max;
-  const recent = activity.filter((a) => a.type !== 'join').slice(0, 4);
+  const recent = activity.filter((a) => a.type !== 'join').slice(0, 3);
 
   return (
-    <div className="cx-home">
-      <section className="cx-hero rise">
-        <div className="cx-hero-copy">
-          <p className="eyebrow cx-hero-eyebrow">{greeting()}</p>
-          <h1 className="display cx-hero-title">
-            {firstName(customer.name)}, time for a <span className="heading-accent">koffie</span> break?
-          </h1>
+    <div className="home">
+      <header className="home-head rise">
+        <div>
+          <p className="home-date">{today()}</p>
+          <h1 className="home-title">Hi, {firstName(customer.name)}</h1>
         </div>
-        <div className="cx-hero-art">
+        <div className="home-art" aria-hidden="true">
           <CoffeeBreak />
         </div>
+      </header>
+
+      <section className="rise rise-1" aria-label="My loyalty card">
+        <LoyaltyCard customer={customer} settings={settings} newIndex={newIndex} />
       </section>
 
-      <div className="cx-home-grid">
-        <section className="cx-card-wrap rise rise-1" aria-labelledby="my-card">
-          <h2 id="my-card" className="sr-only">
-            My loyalty card
+      <section className="rise rise-2" aria-label={complete ? 'Your reward' : 'Collect a sticker'}>
+        {complete ? (
+          <Link to="/app/rewards" className="group group-link">
+            <span className="group-icon is-gold">
+              <Icon name="gift" />
+            </span>
+            <span className="group-text">
+              <strong>Claim your free coffee</strong>
+              <span>Show your reward QR to the barista.</span>
+            </span>
+            <Icon name="chevronRight" className="group-chev" />
+          </Link>
+        ) : (
+          <div className="group scan-hint">
+            <span className="group-icon scan-hint-icon">
+              <Icon name="camera" />
+            </span>
+            <span className="group-text">
+              <strong>Collect a sticker</strong>
+              <span>After you pay, point your phone camera at the QR code by the till.</span>
+            </span>
+          </div>
+        )}
+      </section>
+
+      <section className="rise rise-3" aria-labelledby="recent">
+        <div className="list-head">
+          <h2 id="recent" className="list-title">
+            Recent visits
           </h2>
-          <LoyaltyCard customer={customer} settings={settings} newIndex={newIndex} />
-          {complete ? (
-            <Link to="/app/rewards" className="btn btn-lg btn-block btn-cta btn-dark cx-card-cta">
-              Claim my free coffee
-              <span className="btn-orb">
-                <Icon name="gift" />
-              </span>
+          {recent.length > 0 && (
+            <Link to="/app/history" className="link">
+              See all
             </Link>
-          ) : (
-            <div className="scan-hint">
-              <span className="scan-hint-icon">
-                <Icon name="camera" />
-              </span>
-              <p>
-                <strong>Collect a sticker</strong>
-                <span>After you pay, point your phone camera at the QR code by the till.</span>
-              </p>
-            </div>
           )}
-        </section>
+        </div>
+        {recent.length === 0 ? (
+          <div className="group group-empty">
+            <Icon name="bean" />
+            <span>Your first sticker is one coffee away.</span>
+          </div>
+        ) : (
+          <ul className="group group-list">
+            {recent.map((a, i) => (
+              <li key={a.id}>
+                <MiniSticker index={i * 3 + 1} size={34} />
+                <span className="group-text">
+                  <strong>{a.type === 'redeem' ? 'Free coffee' : a.type === 'adjust' ? 'Card adjusted' : a.drink ?? (a.note === 'Counter QR' ? 'Sticker' : 'Coffee')}</strong>
+                  <span>{a.type === 'redeem' ? 'Reward redeemed' : a.type === 'adjust' ? a.note ?? 'By the team' : '+1 sticker'}</span>
+                </span>
+                <time className="group-meta">{timeAgo(a.at)}</time>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-        <aside className="cx-side">
-          <section className="card card-pad rise rise-2" aria-labelledby="how">
-            <div className="card-head">
-              <h2 id="how" className="card-title">
-                How it works
-              </h2>
-            </div>
-            <ol className="steps">
-              <li>
-                <span className="step-num">1</span>
-                <div>
-                  <strong>Order your coffee</strong>
-                  <p>Any drink on the menu counts.</p>
-                </div>
-              </li>
-              <li>
-                <span className="step-num">2</span>
-                <div>
-                  <strong>Scan the counter QR</strong>
-                  <p>Point your phone camera at the code by the till.</p>
-                </div>
-              </li>
-              <li>
-                <span className="step-num">3</span>
-                <div>
-                  <strong>Collect & bloom</strong>
-                  <p>Sticker {max} is a free cup, on us.</p>
-                </div>
-              </li>
-            </ol>
-          </section>
-
-          <section className="card card-pad rise rise-3" aria-labelledby="recent">
-            <div className="card-head">
-              <h2 id="recent" className="card-title">
-                Recent visits
-              </h2>
-              <Link to="/app/history" className="link">
-                See all
-              </Link>
-            </div>
-            {recent.length === 0 ? (
-              <div className="empty">
-                <Icon name="bean" />
-                <p>Your first sticker is one coffee away.</p>
-              </div>
-            ) : (
-              <ul className="visit-list">
-                {recent.map((a, i) => (
-                  <li key={a.id}>
-                    <MiniSticker index={i * 3 + 1} size={36} />
-                    <div className="visit-text">
-                      <strong>{a.type === 'redeem' ? 'Free coffee enjoyed' : a.type === 'adjust' ? 'Card adjusted' : a.drink ?? 'Coffee'}</strong>
-                      <span>{a.type === 'redeem' ? 'Reward redeemed' : a.type === 'adjust' ? a.note ?? 'By the team' : '+1 sticker'}</span>
-                    </div>
-                    <time className="visit-time">{timeAgo(a.at)}</time>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </aside>
-      </div>
+      <section className="rise rise-4" aria-labelledby="how">
+        <h2 id="how" className="list-title list-head">
+          How it works
+        </h2>
+        <ol className="group group-list group-steps">
+          <li>
+            <span className="step-dot">1</span>
+            <span className="group-text">
+              <strong>Order any coffee</strong>
+              <span>Every drink on the menu counts.</span>
+            </span>
+          </li>
+          <li>
+            <span className="step-dot">2</span>
+            <span className="group-text">
+              <strong>Scan the counter QR</strong>
+              <span>A sticker lands on your card.</span>
+            </span>
+          </li>
+          <li>
+            <span className="step-dot">3</span>
+            <span className="group-text">
+              <strong>Enjoy cup {max} on us</strong>
+              <span>Show your reward QR at the till.</span>
+            </span>
+          </li>
+        </ol>
+      </section>
     </div>
   );
 }

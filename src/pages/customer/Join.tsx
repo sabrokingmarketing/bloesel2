@@ -133,7 +133,7 @@ export function Join() {
               <p className="muted join-lede">Your card lives on the phone you signed up with. Here is how to move it to this one.</p>
               <ol className="move-steps">
                 <li>
-                  <span className="step-num">1</span>
+                  <span className="step-dot">1</span>
                   <div>
                     <strong>Still have your old phone?</strong>
                     <p>
@@ -142,7 +142,7 @@ export function Join() {
                   </div>
                 </li>
                 <li>
-                  <span className="step-num">2</span>
+                  <span className="step-dot">2</span>
                   <div>
                     <strong>Lost it or changed numbers?</strong>
                     <p>Ask your barista at the counter. They can send your card to this phone in seconds, stickers and all.</p>
