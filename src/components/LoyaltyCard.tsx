@@ -1,5 +1,4 @@
 import type { Customer, Settings } from '../data/types';
-import { shortDate } from '../lib/format';
 import { Logo } from './Logo';
 import { Sticker } from './Sticker';
 
@@ -11,6 +10,10 @@ type Props = {
   compact?: boolean;
 };
 
+/**
+ * The loyalty card, styled like a wallet pass: brand header, sticker grid,
+ * and a single progress line. Nothing decorative that doesn't carry meaning.
+ */
 export function LoyaltyCard({ customer, settings, newIndex = null, compact = false }: Props) {
   const max = settings.stampsRequired;
   const have = Math.min(customer.stamps, max);
@@ -20,7 +23,6 @@ export function LoyaltyCard({ customer, settings, newIndex = null, compact = fal
   return (
     <article className={`loyalty-card ${complete ? 'is-complete' : ''} ${compact ? 'is-compact' : ''}`} aria-label={`Loyalty card: ${have} of ${max} stickers`}>
       <header className="lc-head">
-        <div className="lc-pattern" aria-hidden="true" />
         <Logo tone="light" size="sm" />
         <div className="lc-member">
           <span className="lc-member-label">Member</span>
@@ -48,24 +50,15 @@ export function LoyaltyCard({ customer, settings, newIndex = null, compact = fal
         </div>
       </div>
 
-      <div className="lc-perf" aria-hidden="true" />
-
       <footer className="lc-foot">
-        <div className="lc-count">
-          <span className="display lc-num tabular">
-            <em>{have}</em> of {max}
-          </span>
-          <span className="lc-count-label">stickers collected</span>
+        <div className="lc-bar" role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={have} aria-label="Stickers collected">
+          <span style={{ width: `${(have / max) * 100}%` }} />
         </div>
-        <div className="lc-status">
-          {complete ? (
-            <span className="chip chip-caramel">Free coffee ready</span>
-          ) : (
-            <span className="lc-left">
-              <strong>{left}</strong> more to a free cup
-            </span>
-          )}
-          {!compact && <span className="lc-since">Since {shortDate(customer.joinedAt)}</span>}
+        <div className="lc-foot-row">
+          <span className="lc-count tabular">
+            <strong>{have}</strong> of {max} stickers
+          </span>
+          <span className={`lc-left ${complete ? 'is-ready' : ''}`}>{complete ? 'Free coffee ready' : `${left} to go`}</span>
         </div>
       </footer>
     </article>

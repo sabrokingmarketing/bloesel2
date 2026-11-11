@@ -43,6 +43,11 @@
   --paper: #fffcfa;
   --white: #ffffff;
 
+  /* Customer app: calm neutral canvas with hairline separators (iOS-style). */
+  --app-bg: #f6f4f3;
+  --hairline: rgba(46, 26, 22, 0.09);
+  --label-2: #7a6a64;
+
   /* Semantic */
   --bg: var(--cream);
   --surface: var(--paper);
