@@ -58,7 +58,7 @@ export function Join() {
     <div className="join">
       <section className="join-art">
         <div className="join-art-inner">
-          <Logo tone="light" />
+          <Logo size="lg" />
           <div className="join-lottie">
             <CoffeeBreak />
           </div>
