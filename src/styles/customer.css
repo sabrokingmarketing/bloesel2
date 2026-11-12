@@ -834,6 +834,7 @@
 .join {
   min-height: 100dvh;
   display: grid;
+  background: #fff;
 }
 .join-art {
   display: none;
@@ -935,32 +936,47 @@
     display: grid;
     grid-template-rows: auto 1fr auto;
     padding: var(--s-8);
-    border-radius: 36px;
-    background: radial-gradient(120% 90% at 30% 20%, var(--rose-400), #f24fb4 70%);
-    color: var(--on-pink);
+    background: #fff;
+    color: var(--ink);
     overflow: hidden;
   }
   .join-lottie {
+    position: relative;
     display: grid;
     place-items: center;
     min-height: 0;
   }
+  /* Same soft pink circle behind the illustration as the landing page. */
+  .join-lottie::before {
+    content: '';
+    position: absolute;
+    width: min(88%, 460px);
+    aspect-ratio: 1;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, var(--blush-100), var(--blush-200) 70%);
+  }
   .join-lottie .coffee-break {
+    position: relative;
     max-width: 480px;
     max-height: 100%;
-    filter: drop-shadow(0 30px 40px rgba(140, 31, 94, 0.35));
   }
   .join-art-copy h2 {
     font-size: var(--fs-40);
     max-width: 14ch;
   }
+  .join-art-copy h2 {
+    color: var(--espresso-900);
+  }
   .join-art-copy .heading-accent {
-    color: #fff;
+    color: var(--rose-600);
   }
   .join-art-copy p {
     margin-top: var(--s-3);
     max-width: 40ch;
-    opacity: 0.85;
+    color: var(--ink-soft);
   }
   .join-form-wrap {
     align-content: center;

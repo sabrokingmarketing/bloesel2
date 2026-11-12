@@ -345,6 +345,7 @@
 .ad-login {
   min-height: 100dvh;
   display: grid;
+  background: #fff;
 }
 .ad-login-art {
   display: none;
@@ -453,27 +454,31 @@
     grid-template-rows: auto 1fr auto;
     margin: var(--s-4);
     padding: var(--s-8);
-    border-radius: 36px;
-    background: radial-gradient(120% 90% at 30% 20%, var(--espresso-700), var(--espresso-950) 75%);
-    color: #fff;
+    background: #fff;
+    color: var(--ink);
     overflow: hidden;
     position: relative;
-  }
-  .ad-login-art::before {
-    content: '';
-    position: absolute;
-    width: 70%;
-    aspect-ratio: 1;
-    left: 15%;
-    top: 18%;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 102, 196, 0.35), transparent 65%);
   }
   .ad-login-lottie {
     position: relative;
     display: grid;
     place-items: center;
     min-height: 0;
+  }
+  /* Same soft pink circle behind the illustration as the landing page. */
+  .ad-login-lottie::before {
+    content: '';
+    position: absolute;
+    width: min(88%, 460px);
+    aspect-ratio: 1;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, var(--blush-100), var(--blush-200) 70%);
+  }
+  .ad-login-lottie .coffee-break {
+    position: relative;
   }
   .ad-login-lottie .coffee-break {
     max-width: 460px;
@@ -483,9 +488,11 @@
     position: relative;
     font-size: var(--fs-40);
     max-width: 14ch;
+    color: var(--espresso-900);
+    text-transform: capitalize;
   }
   .ad-login-quote .heading-accent {
-    color: var(--rose-300);
+    color: var(--rose-600);
   }
   .ad-login-mobile-logo {
     display: none;
