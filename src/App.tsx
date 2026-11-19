@@ -7,7 +7,6 @@ import { Claim } from './pages/customer/Claim';
 import { CounterStamp } from './pages/customer/CounterStamp';
 import { ResetPin } from './pages/customer/ResetPin';
 import { Home } from './pages/customer/Home';
-import { QRPage } from './pages/customer/QRPage';
 import { Rewards } from './pages/customer/Rewards';
 import { History } from './pages/customer/History';
 import { Profile } from './pages/customer/Profile';
@@ -23,7 +22,7 @@ export function App() {
       <Route path="/app/claim" element={<Claim />} />
       <Route path="/app/stamp" element={<CounterStamp />} />
       <Route path="/app/reset" element={<ResetPin />} />
-      <Route path="/app/qr" element={<QRPage />} />
+      <Route path="/app/qr" element={<Navigate to="/app/rewards" replace />} />
       <Route path="/app" element={<CustomerLayout />}>
         <Route index element={<Home />} />
         <Route path="rewards" element={<Rewards />} />

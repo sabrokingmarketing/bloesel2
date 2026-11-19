@@ -191,10 +191,6 @@ export function useMeSync(ms: number) {
   usePolling(refreshMe, ms);
 }
 
-export function qrPayload(c: Customer) {
-  return `BLOEISEL:${c.code}`;
-}
-
 /** Every call that signs this phone in returns the card; the session itself arrives as a cookie. */
 function signedIn(data: MeData) {
   forgetLegacyToken();
@@ -382,11 +378,6 @@ function upsertCustomer(c: Customer) {
   }
   void refreshSnapshot();
   return c;
-}
-
-export async function lookupMember(raw: string) {
-  const { customer } = await api<{ customer: Customer }>('POST', '/api/admin/lookup', { code: raw });
-  return upsertCustomer(customer);
 }
 
 export async function addStamp(customerId: string, drink?: string) {

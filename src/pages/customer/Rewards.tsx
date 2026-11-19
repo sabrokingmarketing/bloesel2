@@ -1,8 +1,5 @@
-import { Link } from 'react-router-dom';
-import { BrandQR } from '../../components/BrandQR';
 import { Icon } from '../../components/Icon';
 import { Sticker } from '../../components/Sticker';
-import { qrPayload } from '../../data/store';
 import { shortDate } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
 
@@ -33,18 +30,16 @@ export function Rewards() {
               <div>
                 <p className="eyebrow reward-eyebrow">Ready to redeem</p>
                 <h2 className="display reward-name">{settings.rewardName}</h2>
-                <p className="reward-note">Show this at the counter. Your barista will redeem it and start a fresh card.</p>
+                <p className="reward-note">Show this screen at the counter. Your barista will find your card and redeem it.</p>
               </div>
             </div>
             <div className="reward-perf" aria-hidden="true" />
             <div className="reward-ticket-bottom">
-              <BrandQR value={qrPayload(customer)} className="reward-qr" label="Reward QR code" />
-              <div className="reward-code">
+              <div className="reward-code reward-code-big">
+                <span className="eyebrow">Name</span>
+                <strong>{customer.name}</strong>
                 <span className="eyebrow">Member code</span>
                 <strong className="tabular">{customer.code}</strong>
-                <Link to="/app/qr" className="btn btn-dark btn-sm">
-                  <Icon name="qr" /> Full screen
-                </Link>
               </div>
             </div>
           </section>

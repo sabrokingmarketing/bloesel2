@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
 import { TransferSheet, type Transfer } from '../../components/TransferSheet';
-import { adjustStamps, deleteCustomer, redeemReward, staffTransfer, useAdminDB, type ApiError } from '../../data/store';
+import { addStamp, adjustStamps, deleteCustomer, redeemReward, staffTransfer, useAdminDB, type ApiError } from '../../data/store';
 import type { Customer } from '../../data/types';
 import { isLapsed } from '../../lib/analytics';
 import { dateTime, initials, shortDate, timeAgo } from '../../lib/format';
@@ -255,9 +255,9 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
               <Icon name="gift" /> Redeem reward
             </button>
           ) : (
-            <Link to={`/admin/scan?code=${customer.code}`} className="btn btn-primary">
-              <Icon name="scan" /> Stamp at till
-            </Link>
+            <button className="btn btn-primary" disabled={busy} onClick={() => run(() => addStamp(customer.id), 'Sticker added')}>
+              <Icon name="plus" /> Add sticker
+            </button>
           )}
         </div>
 
