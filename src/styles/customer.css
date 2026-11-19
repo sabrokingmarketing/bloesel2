@@ -469,38 +469,17 @@
 
 .reward-ticket {
   position: relative;
+  display: grid;
   border-radius: var(--r-xl);
   background: linear-gradient(150deg, #fbe7c6, var(--caramel-300) 45%, var(--caramel-400));
   box-shadow: 0 24px 50px -24px rgba(169, 110, 40, 0.65);
   overflow: hidden;
   color: var(--espresso-900);
 }
-.reward-ticket-top {
-  display: flex;
-  gap: var(--s-4);
-  align-items: center;
-  padding: var(--s-6) var(--s-5) var(--s-5);
-}
-.reward-ticket-sticker {
-  width: 92px;
-  flex: none;
-  animation: sway 3.6s ease-in-out infinite;
-}
 @keyframes sway {
   50% {
     transform: rotate(6deg) translateY(-3px);
   }
-}
-.reward-eyebrow {
-  color: #8a5a1e;
-}
-.reward-name {
-  font-size: var(--fs-24);
-  margin: 2px 0 6px;
-}
-.reward-note {
-  font-size: var(--fs-13);
-  color: #6b4a2b;
 }
 .reward-perf {
   position: relative;
@@ -523,23 +502,6 @@
 .reward-perf::after {
   right: -32px;
 }
-.reward-ticket-bottom {
-  display: flex;
-  gap: var(--s-5);
-  align-items: center;
-  padding: var(--s-5);
-}
-.reward-code {
-  display: grid;
-  gap: 4px;
-  justify-items: start;
-}
-.reward-code strong {
-  font-size: var(--fs-20);
-  letter-spacing: 0.06em;
-  margin-bottom: 6px;
-}
-
 .stat-trio {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1400,25 +1362,160 @@
   width: min(420px, 100%);
 }
 
-/* Reward ticket: the member's own "Redeemed" button, and the redeemed state with its date. */
-.reward-ticket-bottom:has(.reward-redeem-btn) {
+/* ---------- Gold reward ticket ---------- */
+.rt-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-5) var(--s-5) 0;
+}
+.rt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #8a5a1e;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(138, 90, 30, 0.15);
+}
+.rt-badge.is-done {
+  background: var(--success-soft);
+  color: #2f6b45;
+  box-shadow: inset 0 0 0 1px rgba(47, 107, 69, 0.18);
+}
+.rt-sticker {
+  position: relative;
+  width: 76px;
+  flex: none;
+  margin: -6px -4px 0 0;
+  animation: sway 3.6s ease-in-out infinite;
+}
+.is-redeemed .rt-sticker {
+  animation: none;
+}
+.rt-sticker-check {
+  position: absolute;
+  right: -2px;
+  bottom: 2px;
   display: grid;
-  gap: var(--s-4);
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+  box-shadow: 0 0 0 3px #fbe7c6;
 }
-.reward-redeem-btn {
-  min-height: 52px;
+.rt-sticker-check svg {
+  width: 16px;
+  height: 16px;
 }
-.reward-eyebrow:has(svg) {
+.rt-title {
+  display: grid;
+  padding: var(--s-2) var(--s-5) 0;
+  font-size: clamp(2rem, 9vw, 2.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+.rt-title span {
+  display: block;
+}
+.rt-note {
+  padding: var(--s-3) var(--s-5) var(--s-5);
+  font-size: var(--fs-14);
+  line-height: 1.5;
+  color: #6b4a2b;
+  max-width: 40ch;
+}
+.rt-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4) var(--s-4);
+  margin: 0;
+  padding: var(--s-5);
+}
+.rt-details div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.rt-details .rt-wide {
+  grid-column: 1 / -1;
+}
+.rt-details dt {
+  font-size: var(--fs-11);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(107, 74, 43, 0.75);
+}
+.rt-details dd {
+  margin: 0;
+  font-size: var(--fs-18);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.rt-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--s-3);
+  margin: 0 var(--s-4) var(--s-4);
+  padding: 10px 16px 10px 10px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--espresso-900);
+  color: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 16px 30px -16px rgba(40, 20, 15, 0.8);
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.rt-btn:hover {
+  transform: translateY(-1px);
+}
+.rt-btn:active {
+  transform: scale(0.98);
+}
+.rt-btn-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 15px;
+  background: linear-gradient(150deg, #fbe7c6, var(--caramel-400));
+  color: var(--espresso-900);
+}
+.rt-btn-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.rt-btn-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+.rt-btn-text strong {
+  font-size: var(--fs-16);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.rt-btn-text small {
+  font-size: var(--fs-12);
+  color: rgba(255, 255, 255, 0.65);
+}
+.rt-btn-chev {
+  color: rgba(255, 255, 255, 0.6);
 }
 .reward-ticket.is-redeemed {
   margin-bottom: var(--s-4);
-}
-.reward-ticket.is-redeemed .reward-eyebrow {
-  color: #3f7a52;
-}
-.reward-ticket.is-redeemed .reward-code strong:first-of-type {
-  letter-spacing: 0.02em;
 }

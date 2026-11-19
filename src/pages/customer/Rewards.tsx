@@ -11,6 +11,26 @@ function redeemedAt(iso: string) {
   return `${d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })} at ${d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
+const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+/** The reward name on two balanced lines: "A free coffee" / "on us". */
+function RewardTitle({ name }: { name: string }) {
+  const m = name.match(/^(.*?)[,\s]+(on us[.!]?)$/i);
+  return (
+    <h2 className="display rt-title">
+      {m ? (
+        <>
+          <span>{m[1]}</span>
+          <span>{m[2]}</span>
+        </>
+      ) : (
+        <span>{name}</span>
+      )}
+    </h2>
+  );
+}
+
 /** How long the gold "Redeemed" ticket stays on screen after a free coffee. */
 const SHOW_REDEEMED_MS = 24 * 3600_000;
 
@@ -51,54 +71,70 @@ export function Rewards() {
       <div className="rewards-grid">
         {complete ? (
           <section className="reward-ticket rise rise-1" aria-label="Reward ready">
-            <div className="reward-ticket-top">
-              <div className="reward-ticket-sticker">
+            <div className="rt-head">
+              <span className="rt-badge">
+                <Icon name="sparkle" size={14} /> Ready to redeem
+              </span>
+              <div className="rt-sticker">
                 <Sticker index={max - 1} filled isReward />
               </div>
-              <div>
-                <p className="eyebrow reward-eyebrow">Ready to redeem</p>
-                <h2 className="display reward-name">{settings.rewardName}</h2>
-                <p className="reward-note">Show this screen at the counter. Tap Redeemed when your barista hands you your coffee.</p>
-              </div>
             </div>
+            <RewardTitle name={settings.rewardName} />
+            <p className="rt-note">Show this screen at the counter, then tap the button below as your barista hands you your coffee.</p>
             <div className="reward-perf" aria-hidden="true" />
-            <div className="reward-ticket-bottom">
-              <div className="reward-code reward-code-big">
-                <span className="eyebrow">Name</span>
-                <strong>{customer.name}</strong>
-                <span className="eyebrow">Member code</span>
-                <strong className="tabular">{customer.code}</strong>
+            <dl className="rt-details">
+              <div>
+                <dt>Name</dt>
+                <dd>{customer.name}</dd>
               </div>
-              <button className="btn btn-dark btn-block reward-redeem-btn" onClick={() => setConfirm(true)}>
-                <Icon name="check" /> Redeemed
-              </button>
-            </div>
+              <div>
+                <dt>Member code</dt>
+                <dd className="tabular">{customer.code}</dd>
+              </div>
+            </dl>
+            <button className="rt-btn" onClick={() => setConfirm(true)}>
+              <span className="rt-btn-icon">
+                <Icon name="gift" />
+              </span>
+              <span className="rt-btn-text">
+                <strong>Mark as redeemed</strong>
+                <small>Tap at the counter</small>
+              </span>
+              <Icon name="chevronRight" className="rt-btn-chev" />
+            </button>
           </section>
         ) : (
           <>
           {justRedeemed && (
             <section className="reward-ticket is-redeemed rise rise-1" aria-label="Free coffee redeemed">
-              <div className="reward-ticket-top">
-                <div className="reward-ticket-sticker">
+              <div className="rt-head">
+                <span className="rt-badge is-done">
+                  <Icon name="check" size={14} /> Redeemed
+                </span>
+                <div className="rt-sticker">
                   <Sticker index={max - 1} filled isReward />
+                  <span className="rt-sticker-check" aria-hidden="true">
+                    <Icon name="check" />
+                  </span>
+                </div>
+              </div>
+              <RewardTitle name={last.drink ?? settings.rewardName} />
+              <p className="rt-note">Enjoy! Your new card has already started.</p>
+              <div className="reward-perf" aria-hidden="true" />
+              <dl className="rt-details">
+                <div>
+                  <dt>Redeemed on</dt>
+                  <dd className="tabular">{dayOf(last.at)}</dd>
                 </div>
                 <div>
-                  <p className="eyebrow reward-eyebrow">
-                    <Icon name="check" size={13} /> Redeemed
-                  </p>
-                  <h2 className="display reward-name">{last.drink ?? settings.rewardName}</h2>
-                  <p className="reward-note">Enjoy! Your new card has started.</p>
+                  <dt>Time</dt>
+                  <dd className="tabular">{timeOf(last.at)}</dd>
                 </div>
-              </div>
-              <div className="reward-perf" aria-hidden="true" />
-              <div className="reward-ticket-bottom">
-                <div className="reward-code reward-code-big">
-                  <span className="eyebrow">Redeemed on</span>
-                  <strong className="tabular">{redeemedAt(last.at)}</strong>
-                  <span className="eyebrow">Member</span>
-                  <strong>{customer.name}</strong>
+                <div className="rt-wide">
+                  <dt>Member</dt>
+                  <dd>{customer.name}</dd>
                 </div>
-              </div>
+              </dl>
             </section>
           )}
           <section className="card reward-progress rise rise-1" aria-label="Progress to free coffee">
