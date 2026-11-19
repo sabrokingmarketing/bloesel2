@@ -286,6 +286,17 @@ export async function counterStamp(code: string, idempotencyKey: string) {
   return res;
 }
 
+/** The member marks their free coffee as redeemed; the card starts again and the history stays. */
+export async function redeemMyReward() {
+  const res = await withRetry((key) => api<{ customer: Customer }>('POST', '/api/me/redeem', { idempotencyKey: key }, { device: true }));
+  if (me.data) {
+    const { stamps, rewardsRedeemed } = res.customer;
+    setMe({ data: { ...me.data, customer: { ...me.data.customer, stamps, rewardsRedeemed } } });
+  }
+  void refreshMe();
+  return res;
+}
+
 /** What the printed counter QR encodes. The code rides in the fragment, so it never lands in server logs. */
 export function counterQrUrl(code: string) {
   return `${window.location.origin}/app/stamp#c=${code}`;

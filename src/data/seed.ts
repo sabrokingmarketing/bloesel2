@@ -197,7 +197,7 @@ export function createSeed(now = new Date()): Omit<DB, 'counter'> {
     settings: {
       storeName: 'Bloeisel Koffie',
       stampsRequired: 10,
-      rewardName: 'Any coffee, on us',
+      rewardName: 'A free coffee on us',
     },
   };
 }

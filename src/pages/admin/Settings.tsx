@@ -35,7 +35,7 @@ export function SettingsPage() {
       await updateSettings({
         storeName: storeName.trim() || 'Bloeisel Koffie',
         stampsRequired: stamps,
-        rewardName: reward.trim() || 'Any coffee, on us',
+        rewardName: reward.trim() || 'A free coffee on us',
         ...(pin ? { pin } : {}),
       });
       setPin('');

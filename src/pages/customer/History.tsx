@@ -8,7 +8,7 @@ function label(a: Activity) {
     case 'stamp':
       return { title: a.drink ?? 'Coffee', sub: a.note === 'Counter QR' ? '+1 sticker · scanned at the counter' : '+1 sticker' };
     case 'redeem':
-      return { title: 'Free coffee', sub: 'Reward redeemed' };
+      return { title: 'Free coffee', sub: a.note === 'Redeemed by member' ? 'Reward redeemed at the counter' : 'Reward redeemed' };
     case 'adjust':
       return { title: 'Card adjusted', sub: `${a.delta && a.delta > 0 ? '+' : ''}${a.delta ?? 0} sticker${Math.abs(a.delta ?? 0) === 1 ? '' : 's'}${a.note ? ` · ${a.note}` : ''}` };
     default:

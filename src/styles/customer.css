@@ -1399,3 +1399,26 @@
 .reset-card {
   width: min(420px, 100%);
 }
+
+/* Reward ticket: the member's own "Redeemed" button, and the redeemed state with its date. */
+.reward-ticket-bottom:has(.reward-redeem-btn) {
+  display: grid;
+  gap: var(--s-4);
+}
+.reward-redeem-btn {
+  min-height: 52px;
+}
+.reward-eyebrow:has(svg) {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.reward-ticket.is-redeemed {
+  margin-bottom: var(--s-4);
+}
+.reward-ticket.is-redeemed .reward-eyebrow {
+  color: #3f7a52;
+}
+.reward-ticket.is-redeemed .reward-code strong:first-of-type {
+  letter-spacing: 0.02em;
+}

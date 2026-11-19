@@ -64,7 +64,7 @@ describe('customer cards', () => {
     expect(me.status).toBe(200);
     expect(me.data.customer.id).toBe(customer.id);
     expect(me.data.activity[0].type).toBe('join');
-    expect(me.data.settings).toEqual({ storeName: 'Bloeisel Koffie', stampsRequired: 10, rewardName: 'Any coffee, on us' });
+    expect(me.data.settings).toEqual({ storeName: 'Bloeisel Koffie', stampsRequired: 10, rewardName: 'A free coffee on us' });
   });
 
   it('rejects missing or forged device tokens', async () => {
@@ -244,6 +244,26 @@ describe('printed QR codes', () => {
     const cookie = await staff();
     const res = await call('POST', '/api/admin/campaigns', { cookie, body: { name: 'Bad', kind: 'custom', targetUrl: 'javascript:alert(1)' } });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('member redeems their own free coffee', () => {
+  it('only with a full card; the card resets and the history stays', async () => {
+    const cookie = await staff();
+    const { token, customer } = await join();
+    const early = await call('POST', '/api/me/redeem', { token, body: { idempotencyKey: 'self-redeem-early' } });
+    expect(early.status).toBe(409);
+    expect((await call('POST', '/api/me/redeem', { body: { idempotencyKey: 'self-redeem-nocard' } })).status).toBe(401);
+    for (let i = 0; i < 10; i++) await call('POST', `/api/admin/customers/${customer.id}/stamp`, { cookie, body: { idempotencyKey: `fill-${i}-0000` } });
+    const res = await call('POST', '/api/me/redeem', { token, body: { idempotencyKey: 'self-redeem-0001' } });
+    expect(res.status).toBe(200);
+    expect(res.data.customer.stamps).toBe(0);
+    expect(res.data.customer.rewardsRedeemed).toBe(1);
+    // A retry of the same tap does not redeem twice.
+    expect((await call('POST', '/api/me/redeem', { token, body: { idempotencyKey: 'self-redeem-0001' } })).data.customer.rewardsRedeemed).toBe(1);
+    const me = await call('GET', '/api/me', { token });
+    expect(me.data.activity[0]).toMatchObject({ type: 'redeem', note: 'Redeemed by member', drink: 'A free coffee on us' });
+    expect(me.data.activity.filter((a: { type: string }) => a.type === 'stamp')).toHaveLength(10);
   });
 });
 

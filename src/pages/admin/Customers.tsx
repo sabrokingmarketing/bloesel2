@@ -294,7 +294,7 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
                 </span>
                 <span className="csheet-act-text">
                   {a.type === 'stamp' && `Sticker · ${a.note === 'Counter QR' ? 'Counter QR' : a.drink ?? 'Coffee'}`}
-                  {a.type === 'redeem' && 'Redeemed free coffee'}
+                  {a.type === 'redeem' && (a.note === 'Redeemed by member' ? 'Free coffee · redeemed on their phone' : 'Redeemed free coffee')}
                   {a.type === 'join' && 'Joined the programme'}
                   {a.type === 'adjust' && `Adjusted ${a.delta && a.delta > 0 ? '+' : ''}${a.delta}${a.note ? ` · ${a.note}` : ''}`}
                 </span>

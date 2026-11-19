@@ -1,7 +1,18 @@
+import { useState } from 'react';
+import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Sticker } from '../../components/Sticker';
-import { shortDate } from '../../lib/format';
+import { redeemMyReward, type ApiError } from '../../data/store';
 import { useCustomerCtx } from './CustomerLayout';
+
+/** "19 Nov 2026 at 14:05" */
+function redeemedAt(iso: string) {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })} at ${d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+/** How long the gold "Redeemed" ticket stays on screen after a free coffee. */
+const SHOW_REDEEMED_MS = 24 * 3600_000;
 
 export function Rewards() {
   const { customer, activity, settings } = useCustomerCtx();
@@ -12,12 +23,29 @@ export function Rewards() {
   const R = 62;
   const C = 2 * Math.PI * R;
   const redeemed = activity.filter((a) => a.type === 'redeem');
+  const last = redeemed[0];
+  const justRedeemed = !complete && last && Date.now() - new Date(last.at).getTime() < SHOW_REDEEMED_MS;
+  const toast = useToast();
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const redeem = async () => {
+    setBusy(true);
+    try {
+      await redeemMyReward();
+      setConfirm(false);
+    } catch (err) {
+      toast((err as ApiError).message, 'info');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="cx-page">
       <header className="cx-page-head rise">
         <p className="eyebrow">Rewards</p>
-        <h1 className="display cx-page-title">{complete ? 'A free cup, on us' : 'Your next free cup'}</h1>
+        <h1 className="display cx-page-title">{complete ? 'Your free coffee is ready' : 'Your next free coffee'}</h1>
       </header>
 
       <div className="rewards-grid">
@@ -30,7 +58,7 @@ export function Rewards() {
               <div>
                 <p className="eyebrow reward-eyebrow">Ready to redeem</p>
                 <h2 className="display reward-name">{settings.rewardName}</h2>
-                <p className="reward-note">Show this screen at the counter. Your barista will find your card and redeem it.</p>
+                <p className="reward-note">Show this screen at the counter. Tap Redeemed when your barista hands you your coffee.</p>
               </div>
             </div>
             <div className="reward-perf" aria-hidden="true" />
@@ -41,9 +69,38 @@ export function Rewards() {
                 <span className="eyebrow">Member code</span>
                 <strong className="tabular">{customer.code}</strong>
               </div>
+              <button className="btn btn-dark btn-block reward-redeem-btn" onClick={() => setConfirm(true)}>
+                <Icon name="check" /> Redeemed
+              </button>
             </div>
           </section>
         ) : (
+          <>
+          {justRedeemed && (
+            <section className="reward-ticket is-redeemed rise rise-1" aria-label="Free coffee redeemed">
+              <div className="reward-ticket-top">
+                <div className="reward-ticket-sticker">
+                  <Sticker index={max - 1} filled isReward />
+                </div>
+                <div>
+                  <p className="eyebrow reward-eyebrow">
+                    <Icon name="check" size={13} /> Redeemed
+                  </p>
+                  <h2 className="display reward-name">{last.drink ?? settings.rewardName}</h2>
+                  <p className="reward-note">Enjoy! Your new card has started.</p>
+                </div>
+              </div>
+              <div className="reward-perf" aria-hidden="true" />
+              <div className="reward-ticket-bottom">
+                <div className="reward-code reward-code-big">
+                  <span className="eyebrow">Redeemed on</span>
+                  <strong className="tabular">{redeemedAt(last.at)}</strong>
+                  <span className="eyebrow">Member</span>
+                  <strong>{customer.name}</strong>
+                </div>
+              </div>
+            </section>
+          )}
           <section className="card reward-progress rise rise-1" aria-label="Progress to free coffee">
             <div className="ring">
               <svg viewBox="0 0 160 160" aria-hidden="true">
@@ -79,6 +136,7 @@ export function Rewards() {
               </p>
             </div>
           </section>
+          </>
         )}
 
         <section className="stat-trio rise rise-2" aria-label="Your stats">
@@ -125,8 +183,8 @@ export function Rewards() {
                     <Icon name="gift" />
                   </span>
                   <div>
-                    <strong>{settings.rewardName}</strong>
-                    <span>{shortDate(r.at)}</span>
+                    <strong>{r.drink ?? settings.rewardName}</strong>
+                    <span>{redeemedAt(r.at)}</span>
                   </div>
                   <span className="chip chip-success">Redeemed</span>
                 </li>
@@ -135,6 +193,20 @@ export function Rewards() {
           )}
         </section>
       </div>
+
+      <Sheet open={confirm} onClose={() => !busy && setConfirm(false)} title="Redeem your free coffee?">
+        <div className="pin-sheet">
+          <p className="muted">
+            Only tap this at the counter, when your barista is giving you your free coffee. Your card starts again at 0 stickers, and all your history stays.
+          </p>
+          <button className="btn btn-primary btn-block" disabled={busy} onClick={redeem}>
+            <Icon name="gift" /> {busy ? 'Redeeming…' : 'Yes, redeemed'}
+          </button>
+          <button className="btn btn-ghost btn-block" disabled={busy} onClick={() => setConfirm(false)}>
+            Not yet
+          </button>
+        </div>
+      </Sheet>
     </div>
   );
 }
