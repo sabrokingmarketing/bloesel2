@@ -21,21 +21,26 @@ export class ApiError extends Error {
   }
 }
 
-const DEVICE_KEY = 'bloeisel.device.v1';
+/**
+ * The card session lives in an HttpOnly cookie the server sets (120 days,
+ * renewed on use), so page scripts never see it. Phones that signed up before
+ * that kept the token in localStorage; it is sent once as a Bearer header so
+ * the server can move it onto the cookie, then deleted here.
+ */
+const LEGACY_DEVICE_KEY = 'bloeisel.device.v1';
 
-function readToken() {
+function legacyToken() {
   try {
-    return localStorage.getItem(DEVICE_KEY);
+    return localStorage.getItem(LEGACY_DEVICE_KEY);
   } catch {
     return null;
   }
 }
-function writeToken(token: string | null) {
+function forgetLegacyToken() {
   try {
-    if (token) localStorage.setItem(DEVICE_KEY, token);
-    else localStorage.removeItem(DEVICE_KEY);
+    localStorage.removeItem(LEGACY_DEVICE_KEY);
   } catch {
-    /* private mode: the card lasts for this tab only */
+    /* ignore */
   }
 }
 
@@ -43,7 +48,7 @@ async function api<T>(method: string, path: string, body?: unknown, opts: { devi
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (opts.device) {
-    const t = readToken();
+    const t = legacyToken();
     if (t) headers.authorization = `Bearer ${t}`;
   }
   let res: Response;
@@ -84,7 +89,8 @@ type MeData = { customer: Customer; activity: Activity[]; settings: Settings };
 type MeState = { status: 'loading' | 'none' | 'ready'; data?: MeData; offline: boolean };
 type AdminState = { auth: 'unknown' | 'out' | 'in'; db?: DB; offline: boolean };
 
-let me: MeState = { status: readToken() ? 'loading' : 'none', offline: false };
+// Unknown until /api/me answers: the session cookie is invisible to scripts.
+let me: MeState = { status: 'loading', offline: false };
 let admin: AdminState = { auth: 'unknown', offline: false };
 
 const listeners = new Set<() => void>();
@@ -134,16 +140,16 @@ export function useSessionCustomer() {
 
 let meInFlight: Promise<void> | null = null;
 export function refreshMe() {
-  if (!readToken()) {
-    setMe({ status: 'none', data: undefined });
-    return Promise.resolve();
-  }
   if (meInFlight) return meInFlight;
   meInFlight = api<MeData>('GET', '/api/me', undefined, { device: true })
-    .then((data) => setMe({ status: 'ready', data, offline: false }))
+    .then((data) => {
+      // The server has now set the cookie, so a pre-cookie token isn't needed any more.
+      forgetLegacyToken();
+      setMe({ status: 'ready', data, offline: false });
+    })
     .catch((err: ApiError) => {
       if (err.status === 401) {
-        writeToken(null);
+        forgetLegacyToken();
         setMe({ status: 'none', data: undefined, offline: false });
       } else {
         // Keep showing the last card we had; just flag that we're out of date.
@@ -162,18 +168,40 @@ export function qrPayload(c: Customer) {
   return `BLOEISEL:${c.code}`;
 }
 
-export async function joinProgramme(input: { name: string; phone: string; email?: string; marketingOptIn?: boolean }) {
-  const res = await api<MeData & { token: string }>('POST', '/api/join', input);
-  writeToken(res.token);
-  setMe({ status: 'ready', data: { customer: res.customer, activity: res.activity, settings: res.settings }, offline: false });
-  return res.customer;
+/** Every call that signs this phone in returns the card; the session itself arrives as a cookie. */
+function signedIn(data: MeData) {
+  forgetLegacyToken();
+  setMe({ status: 'ready', data, offline: false });
+  return data.customer;
+}
+
+export async function joinProgramme(input: { name: string; phone: string; pin: string; email?: string; marketingOptIn?: boolean }) {
+  return signedIn(await api<MeData>('POST', '/api/join', input));
 }
 
 export async function claimCard(token: string) {
-  const res = await api<MeData & { token: string }>('POST', '/api/claim', { token });
-  writeToken(res.token);
-  setMe({ status: 'ready', data: { customer: res.customer, activity: res.activity, settings: res.settings }, offline: false });
-  return res.customer;
+  return signedIn(await api<MeData>('POST', '/api/claim', { token }));
+}
+
+/** Sign in on this phone with mobile number + PIN. */
+export async function signIn(phone: string, pin: string) {
+  return signedIn(await api<MeData>('POST', '/api/signin', { phone, pin }));
+}
+
+/** Set or change the sign-in PIN for the card on this phone. */
+export async function setPin(pin: string) {
+  const data = await api<MeData>('PUT', '/api/me/pin', { pin }, { device: true });
+  setMe({ status: 'ready', data });
+}
+
+/** Emails a PIN reset link. The reply is the same whether or not the address is on a card. */
+export function forgotPin(email: string) {
+  return api<{ ok: true; message: string }>('POST', '/api/pin/forgot', { email });
+}
+
+/** Completes a reset from an emailed link: new PIN, and this phone is signed in. */
+export async function resetPin(token: string, pin: string) {
+  return signedIn(await api<MeData>('POST', '/api/pin/reset', { token, pin }));
 }
 
 export async function updateProfile(patch: { name?: string; phone?: string; email?: string }) {
@@ -187,7 +215,7 @@ export function requestTransfer() {
 
 export async function removeCardFromDevice() {
   await api('DELETE', '/api/me/device', undefined, { device: true }).catch(() => {});
-  writeToken(null);
+  forgetLegacyToken();
   setMe({ status: 'none', data: undefined });
 }
 
@@ -214,7 +242,11 @@ export function getPendingCounterCode() {
 
 export async function counterStamp(code: string, idempotencyKey: string) {
   const res = await api<{ customer: Customer; completed: boolean }>('POST', '/api/me/counter-stamp', { code, idempotencyKey }, { device: true });
-  if (me.data) setMe({ data: { ...me.data, customer: res.customer } });
+  // Take only the card counts from this reply; the full profile comes from /api/me.
+  if (me.data) {
+    const { stamps, totalStamps, rewardsEarned, lastVisit } = res.customer;
+    setMe({ data: { ...me.data, customer: { ...me.data.customer, stamps, totalStamps, rewardsEarned, lastVisit } } });
+  }
   void refreshMe();
   return res;
 }

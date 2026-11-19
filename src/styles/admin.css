@@ -2008,3 +2008,35 @@
     padding: var(--s-6) var(--s-8);
   }
 }
+
+.chart-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  height: 260px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.chart-empty svg {
+  width: 32px;
+  height: 32px;
+  color: var(--rose-400);
+  margin-bottom: 4px;
+}
+.chart-empty strong {
+  color: var(--ink);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.chart-empty span {
+  font-size: var(--fs-13);
+}
+.vf-idle strong {
+  text-transform: capitalize;
+}
+@media (min-width: 1100px) {
+  .chart-empty {
+    height: 300px;
+  }
+}

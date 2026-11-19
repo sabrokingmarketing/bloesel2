@@ -51,8 +51,12 @@ p{margin:0;font-size:13px;font-weight:500}
 <svg class="logo" viewBox="${LOGO_VIEWBOX}" role="img" aria-label="Bloeisel"><path d="${LOGO_PATH}" fill="currentColor" fill-rule="evenodd"/></svg>
 <h1>${headline}</h1><div class="q"><img src="${png}" alt="QR code"/></div>
 <p>${footer}</p></div>
-<script>document.fonts.ready.then(()=>setTimeout(()=>window.print(),250))</script></body></html>`);
+</body></html>`);
   w.document.close();
+  // Printed from here rather than an inline script in the poster, which the Content-Security-Policy blocks.
+  const img = w.document.querySelector('img');
+  await Promise.all([img?.decode().catch(() => {}), w.document.fonts.ready]);
+  window.setTimeout(() => w.print(), 250);
   return true;
 }
 

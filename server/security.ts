@@ -44,6 +44,30 @@ export function safeEqual(a: string, b: string) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
+/* ---------- Customer card session ---------- */
+
+/** HttpOnly cookie holding the phone's device token. */
+export const CARD_COOKIE = 'bk_card';
+/** Members stay signed in this long after their last visit (sliding). */
+export const CARD_SESSION_DAYS = 120;
+
+/** Rejects PINs that are trivially guessed: all one digit, or a straight run like 1234 or 9876. */
+export function weakPin(pin: string) {
+  if (/^(\d)\1+$/.test(pin)) return true;
+  const d = pin.split('').map(Number);
+  const up = d.every((x, i) => i === 0 || x === (d[i - 1]! + 1) % 10);
+  const down = d.every((x, i) => i === 0 || x === (d[i - 1]! + 9) % 10);
+  return up || down;
+}
+
+/** "lerato@example.com" -> "l•••••@example.com". Staff screens never get full addresses. */
+export function maskEmail(email: string | null | undefined) {
+  if (!email) return undefined;
+  const at = email.indexOf('@');
+  if (at < 1) return '•••';
+  return `${email[0]}${'•'.repeat(Math.max(3, Math.min(8, at - 1)))}${email.slice(at)}`;
+}
+
 /* ---------- Staff session cookie ---------- */
 
 export const STAFF_COOKIE = 'bk_staff';

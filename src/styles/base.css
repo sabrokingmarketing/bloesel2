@@ -613,3 +613,9 @@ h3,
     transition-duration: 1ms !important;
   }
 }
+
+/* A dialog receives focus programmatically so keyboard users start inside it; the window itself needs no ring. */
+.sheet:focus,
+.sheet:focus-visible {
+  outline: none;
+}

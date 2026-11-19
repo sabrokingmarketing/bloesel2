@@ -80,7 +80,15 @@ export function Dashboard() {
               ))}
             </div>
           </div>
-          <AreaChart data={data} />
+          {total === 0 ? (
+            <div className="chart-empty">
+              <Icon name="chart" />
+              <strong>No visits {range === 'today' ? 'yet today' : 'in this period yet'}</strong>
+              <span>Stickers and free coffees will show up here as they happen.</span>
+            </div>
+          ) : (
+            <AreaChart data={data} />
+          )}
         </article>
 
         <article className="card card-pad">

@@ -1,54 +1,113 @@
-import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { CoffeeBreak } from '../../components/CoffeeBreak';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
-import { ApiError, getPendingCounterCode, joinProgramme, useMe } from '../../data/store';
+import { PinField, pinProblem } from '../../components/PinField';
+import { ApiError, forgotPin, getPendingCounterCode, joinProgramme, refreshMe, signIn, useMe } from '../../data/store';
 
 const validPhone = (p: string) => {
   const d = p.replace(/\D/g, '');
   return d.length >= 9 && d.length <= 15;
 };
 
+type Mode = 'join' | 'signin' | 'forgot';
+
 export function Join() {
   const me = useMe();
   const navigate = useNavigate();
   const toast = useToast();
-  const [mode, setMode] = useState<'join' | 'find'>('join');
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState<Mode>(params.get('mode') === 'signin' ? 'signin' : 'join');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [pin, setPin] = useState('');
   const [consent, setConsent] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
+
+  // Already signed in on this phone (the session cookie is invisible to scripts, so ask).
+  useEffect(() => {
+    void refreshMe();
+  }, []);
 
   const collecting = !!getPendingCounterCode();
   if (me.status === 'ready') return <Navigate to={collecting ? '/app/stamp' : '/app'} replace />;
 
-  const submit = async (e: FormEvent) => {
+  const go = (m: Mode) => {
+    setMode(m);
+    setErrors({});
+    setSent(null);
+  };
+
+  const afterSignIn = (welcome: string) => {
+    if (collecting) {
+      // They scanned the counter QR first: collect that sticker now.
+      navigate('/app/stamp');
+    } else {
+      toast(welcome, 'sparkle');
+      navigate('/app');
+    }
+  };
+
+  const submitJoin = async (e: FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (name.trim().length < 2) errs.name = 'Tell us what to call you';
     if (!validPhone(phone)) errs.phone = 'Enter a valid mobile number';
     if (email && !/^\S+@\S+\.\S+$/.test(email)) errs.email = 'That email looks off';
+    const pp = pinProblem(pin);
+    if (pp) errs.pin = pp;
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
     setBusy(true);
     try {
-      await joinProgramme({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined, marketingOptIn: consent });
-      if (collecting) {
-        // They scanned the counter QR before having a card: collect that sticker now.
-        navigate('/app/stamp');
-      } else {
-        toast('Your card is ready! Scan the QR by the till for your first sticker.', 'sparkle');
-        navigate('/app');
-      }
+      await joinProgramme({ name: name.trim(), phone: phone.trim(), pin, email: email.trim() || undefined, marketingOptIn: consent });
+      afterSignIn('Your card is ready! Scan the QR by the till for your first sticker.');
     } catch (err) {
       const e = err as ApiError;
-      if (e.code === 'phone_taken') setErrors({ phone: e.message });
-      else toast(e.message, 'info');
+      if (e.code === 'phone_taken') {
+        // They already have a card: take them to sign in with the number filled in.
+        setPin('');
+        go('signin');
+        toast('That number already has a card. Sign in with your PIN.', 'info');
+      } else toast(e.message, 'info');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitSignIn = async (e: FormEvent) => {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!validPhone(phone)) errs.phone = 'Enter your mobile number';
+    if (!/^\d{4}$/.test(pin)) errs.pin = 'Your PIN is 4 digits';
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+    setBusy(true);
+    try {
+      const c = await signIn(phone.trim(), pin);
+      afterSignIn(`Welcome back, ${c.name.split(' ')[0]}`);
+    } catch (err) {
+      setErrors({ pin: (err as ApiError).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitForgot = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return setErrors({ email: 'Enter the email on your card' });
+    setErrors({});
+    setBusy(true);
+    try {
+      setSent((await forgotPin(email.trim())).message);
+    } catch (err) {
+      setErrors({ email: (err as ApiError).message });
     } finally {
       setBusy(false);
     }
@@ -76,16 +135,18 @@ export function Join() {
           <Logo />
         </div>
         <div className="join-form-inner rise">
-          <div className="segmented join-tabs" role="group" aria-label="Choose">
-            <button type="button" aria-pressed={mode === 'join'} onClick={() => setMode('join')}>
-              New card
-            </button>
-            <button type="button" aria-pressed={mode === 'find'} onClick={() => setMode('find')}>
-              I have a card
-            </button>
-          </div>
+          {mode !== 'forgot' && (
+            <div className="segmented join-tabs" role="group" aria-label="Choose">
+              <button type="button" aria-pressed={mode === 'join'} onClick={() => go('join')}>
+                New card
+              </button>
+              <button type="button" aria-pressed={mode === 'signin'} onClick={() => go('signin')}>
+                I have a card
+              </button>
+            </div>
+          )}
 
-          {mode === 'join' ? (
+          {mode === 'join' && (
             <>
               <h1 className="display join-title">Start your card</h1>
               <p className="muted join-lede">
@@ -93,8 +154,7 @@ export function Join() {
                   ? 'Create your card in ten seconds and today’s sticker goes straight onto it.'
                   : 'It takes ten seconds. Your first sticker is waiting at the counter.'}
               </p>
-
-              <form className="join-form" onSubmit={submit} noValidate>
+              <form className="join-form" onSubmit={submitJoin} noValidate>
                 <div className="field">
                   <label htmlFor="j-name">Your name</label>
                   <input id="j-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Lerato Mokoena" autoComplete="name" aria-invalid={!!errors.name} />
@@ -105,9 +165,10 @@ export function Join() {
                   <input id="j-phone" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 82 123 4567" inputMode="tel" autoComplete="tel" aria-invalid={!!errors.phone} />
                   {errors.phone && <span className="field-error">{errors.phone}</span>}
                 </div>
+                <PinField id="j-pin" label="Choose a 4-digit PIN" value={pin} onChange={setPin} error={errors.pin} hint="You'll use it to sign in on another phone." isNew />
                 <div className="field">
                   <label htmlFor="j-email">
-                    Email <span className="faint">(optional)</span>
+                    Email <span className="faint">(optional, to reset your PIN)</span>
                   </label>
                   <input id="j-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" aria-invalid={!!errors.email} />
                   {errors.email && <span className="field-error">{errors.email}</span>}
@@ -127,30 +188,65 @@ export function Join() {
                 </button>
               </form>
             </>
-          ) : (
+          )}
+
+          {mode === 'signin' && (
             <>
-              <h1 className="display join-title">Bring your card over</h1>
-              <p className="muted join-lede">Your card lives on the phone you signed up with. Here is how to move it to this one.</p>
-              <ol className="move-steps">
-                <li>
-                  <span className="step-dot">1</span>
-                  <div>
-                    <strong>Still have your old phone?</strong>
-                    <p>
-                      Open your card there, go to <b>Profile</b> and tap <b>Move to a new phone</b>. Scan the code it shows with this phone.
-                    </p>
-                  </div>
-                </li>
-                <li>
-                  <span className="step-dot">2</span>
-                  <div>
-                    <strong>Lost it or changed numbers?</strong>
-                    <p>Ask your barista at the counter. They can send your card to this phone in seconds, stickers and all.</p>
-                  </div>
-                </li>
-              </ol>
+              <h1 className="display join-title">Welcome back</h1>
+              <p className="muted join-lede">Sign in with your mobile number and PIN. You'll stay signed in on this phone.</p>
+              <form className="join-form" onSubmit={submitSignIn} noValidate>
+                <div className="field">
+                  <label htmlFor="s-phone">Mobile number</label>
+                  <input id="s-phone" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+27 82 123 4567" inputMode="tel" autoComplete="tel" aria-invalid={!!errors.phone} />
+                  {errors.phone && <span className="field-error">{errors.phone}</span>}
+                </div>
+                <PinField id="s-pin" label="PIN" value={pin} onChange={setPin} error={errors.pin} />
+                <button className="btn btn-primary btn-lg btn-block btn-cta" disabled={busy}>
+                  {busy ? 'Signing in…' : 'Sign in'}
+                  <span className="btn-orb">
+                    <Icon name="arrowRight" />
+                  </span>
+                </button>
+              </form>
+              <button type="button" className="link join-forgot" onClick={() => go('forgot')}>
+                Forgot your PIN?
+              </button>
+            </>
+          )}
+
+          {mode === 'forgot' && (
+            <>
+              <button type="button" className="link join-back" onClick={() => go('signin')}>
+                <Icon name="arrowLeft" size={16} /> Back to sign in
+              </button>
+              <h1 className="display join-title">Reset your PIN</h1>
+              {sent ? (
+                <div className="join-sent" role="status">
+                  <span className="group-icon">
+                    <Icon name="mail" />
+                  </span>
+                  <p>{sent}</p>
+                </div>
+              ) : (
+                <>
+                  <p className="muted join-lede">Enter the email on your card and we'll send you a link to choose a new PIN.</p>
+                  <form className="join-form" onSubmit={submitForgot} noValidate>
+                    <div className="field">
+                      <label htmlFor="f-email">Email</label>
+                      <input id="f-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" aria-invalid={!!errors.email} />
+                      {errors.email && <span className="field-error">{errors.email}</span>}
+                    </div>
+                    <button className="btn btn-primary btn-lg btn-block btn-cta" disabled={busy}>
+                      {busy ? 'Sending…' : 'Send reset link'}
+                      <span className="btn-orb">
+                        <Icon name="mail" />
+                      </span>
+                    </button>
+                  </form>
+                </>
+              )}
               <p className="field-hint move-note">
-                <Icon name="shield" size={14} /> This keeps anyone else from claiming your free coffee with just your number.
+                <Icon name="shield" size={14} /> No email on your card? Ask your barista to send your card to this phone.
               </p>
             </>
           )}

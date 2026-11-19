@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
+import { PinField, pinProblem } from '../../components/PinField';
 import { TransferSheet, type Transfer } from '../../components/TransferSheet';
-import { removeCardFromDevice, requestTransfer, updateProfile, type ApiError } from '../../data/store';
+import { removeCardFromDevice, requestTransfer, setPin, updateProfile, type ApiError } from '../../data/store';
 import { initials, shortDate } from '../../lib/format';
 import { useCustomerCtx } from './CustomerLayout';
 
@@ -22,6 +23,38 @@ export function Profile() {
   const [busy, setBusy] = useState(false);
   const [transfer, setTransfer] = useState<Transfer | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [pinOpen, setPinOpen] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [pinError, setPinError] = useState<string | undefined>();
+  const [pinBusy, setPinBusy] = useState(false);
+
+  // /app/profile?pin=1 (from the card page nudge) opens the PIN sheet straight away.
+  useEffect(() => {
+    if (params.get('pin')) {
+      setPinOpen(true);
+      params.delete('pin');
+      setParams(params, { replace: true });
+    }
+  }, [params, setParams]);
+
+  const savePin = async (e: FormEvent) => {
+    e.preventDefault();
+    const problem = pinProblem(newPin);
+    if (problem) return setPinError(problem);
+    setPinBusy(true);
+    try {
+      await setPin(newPin);
+      toast(customer.hasPin ? 'PIN changed' : 'PIN set. You can now sign in on any phone.', 'check');
+      setPinOpen(false);
+      setNewPin('');
+      setPinError(undefined);
+    } catch (err) {
+      setPinError((err as ApiError).message);
+    } finally {
+      setPinBusy(false);
+    }
+  };
   const dirty = name !== customer.name || phone !== customer.phone || email !== (customer.email ?? '');
 
   const save = async (e: FormEvent) => {
@@ -89,6 +122,12 @@ export function Profile() {
         </form>
 
         <section className="card settings-list rise rise-3">
+          <button className="settings-row" onClick={() => setPinOpen(true)}>
+            <Icon name="lock" />
+            <span>{customer.hasPin ? 'Change sign-in PIN' : 'Set a sign-in PIN'}</span>
+            {!customer.hasPin && <span className="settings-badge">New</span>}
+            <Icon name="chevronRight" className="settings-chev" />
+          </button>
           <button className="settings-row" onClick={startTransfer}>
             <Icon name="phone" />
             <span>Move to a new phone</span>
@@ -112,6 +151,19 @@ export function Profile() {
       </div>
 
       <TransferSheet transfer={transfer} onClose={() => setTransfer(null)} who="your" />
+
+      <Sheet open={pinOpen} onClose={() => setPinOpen(false)} title={customer.hasPin ? 'Change your PIN' : 'Set a sign-in PIN'}>
+        <form className="pin-sheet" onSubmit={savePin} noValidate>
+          <p className="muted">With your mobile number and this PIN you can open your card on any phone. You'll stay signed in for 120 days.</p>
+          <PinField id="p-pin" label="New 4-digit PIN" value={newPin} onChange={setNewPin} error={pinError} isNew />
+          <button className="btn btn-primary btn-block btn-cta" disabled={pinBusy}>
+            {pinBusy ? 'Saving…' : 'Save PIN'}
+            <span className="btn-orb">
+              <Icon name="check" />
+            </span>
+          </button>
+        </form>
+      </Sheet>
 
       <Sheet open={confirmRemove} onClose={() => setConfirmRemove(false)} title="Remove card from this phone?">
         <div className="confirm">

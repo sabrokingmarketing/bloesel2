@@ -6,7 +6,7 @@ import { adminSignOut, useAdmin, useAdminDB } from '../../data/store';
 import { initials } from '../../lib/format';
 
 const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
-  { to: '/admin', label: 'Dashboard', icon: 'home', end: true },
+  { to: '/admin', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/admin/scan', label: 'Scan & stamp', icon: 'scan' },
   { to: '/admin/customers', label: 'Customers', icon: 'users' },
   { to: '/admin/qr-codes', label: 'QR codes', icon: 'qr' },

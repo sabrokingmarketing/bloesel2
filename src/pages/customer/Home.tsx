@@ -55,6 +55,21 @@ export function Home() {
         )}
       </section>
 
+      {!customer.hasPin && (
+        <section className="rise rise-2" aria-label="Set a sign-in PIN">
+          <Link to="/app/profile?pin=1" className="group group-link">
+            <span className="group-icon is-dark">
+              <Icon name="lock" />
+            </span>
+            <span className="group-text">
+              <strong>Set a sign-in PIN</strong>
+              <span>Open your card on any phone with your number and PIN.</span>
+            </span>
+            <Icon name="chevronRight" className="group-chev" />
+          </Link>
+        </section>
+      )}
+
       <section className="rise rise-3" aria-labelledby="recent">
         <div className="list-head">
           <h2 id="recent" className="list-title">
