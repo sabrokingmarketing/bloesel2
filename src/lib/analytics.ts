@@ -18,7 +18,7 @@ function change(cur: number, prev: number) {
   return ((cur - prev) / prev) * 100;
 }
 
-export type Kpi = { value: number; delta: number; progress: number; caption: string };
+export type Kpi = { value: number; delta: number; caption: string };
 
 export function kpis(db: DB, now = new Date()) {
   const today = startOfDay(now).getTime();
@@ -45,17 +45,15 @@ export function kpis(db: DB, now = new Date()) {
     return t >= d60 && t < d30;
   }).length;
 
-  const dailyGoal = 40;
   return {
-    today: { value: todayStamps, delta: change(todayStamps, yStamps), progress: Math.min(1, todayStamps / dailyGoal), caption: `Goal ${dailyGoal} a day` } as Kpi,
+    today: { value: todayStamps, delta: change(todayStamps, yStamps), caption: 'vs yesterday' } as Kpi,
     active: {
       value: activeIds.size,
       delta: change(activeIds.size, prevActive.size),
-      progress: db.customers.length ? activeIds.size / db.customers.length : 0,
       caption: `of ${db.customers.length} members`,
     } as Kpi,
-    redeemed: { value: red30, delta: change(red30, redPrev), progress: Math.min(1, red30 / Math.max(1, red30 + 10)), caption: 'Last 30 days' } as Kpi,
-    joined: { value: joins30, delta: change(joins30, joinsPrev), progress: Math.min(1, joins30 / 30), caption: 'Last 30 days' } as Kpi,
+    redeemed: { value: red30, delta: change(red30, redPrev), caption: 'Last 30 days' } as Kpi,
+    joined: { value: joins30, delta: change(joins30, joinsPrev), caption: 'Last 30 days' } as Kpi,
   };
 }
 
@@ -85,16 +83,6 @@ export function series(db: DB, range: 'today' | '7d' | '30d', now = new Date()):
       full: d.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' }),
     };
   });
-}
-
-export function topDrinks(db: DB, days = 30, now = new Date()) {
-  const from = now.getTime() - days * DAY;
-  const counts = new Map<string, number>();
-  for (const a of db.activity) {
-    if (a.type !== 'stamp' || !a.drink || new Date(a.at).getTime() < from) continue;
-    counts.set(a.drink, (counts.get(a.drink) ?? 0) + 1);
-  }
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
 }
 
 export function closeToReward(customers: Customer[], max: number) {
