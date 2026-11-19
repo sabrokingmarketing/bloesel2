@@ -57,7 +57,7 @@ The deployed app refuses to start without a real database, session secret and ad
 
 ### Counter sticker QR
 
-Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. Redeeming the free coffee still happens at the till.
+Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. The window can also be set to **No time limit**, where every scan adds a sticker; the panel then shows a warning, because a customer could keep scanning. The printed code itself never expires. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. Redeeming the free coffee still happens at the till.
 
 ### Backups
 

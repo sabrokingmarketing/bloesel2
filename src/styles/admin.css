@@ -2132,3 +2132,8 @@
 .customers-more .load-more {
   margin-top: 0;
 }
+
+/* Counter QR with no time limit: the hint turns into a warning. */
+.counter-warn {
+  color: var(--danger);
+}

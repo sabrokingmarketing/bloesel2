@@ -830,7 +830,7 @@ route('PATCH', '/api/admin/counter', async (ctx, db) => {
   await requireStaff(ctx, db);
   const input = await body(
     ctx,
-    z.object({ enabled: z.boolean().optional(), cooldownMinutes: z.number().int().min(30, 'At least 30 minutes, so a photo of the poster cannot be reused at home').max(1440).optional(), replaceCode: z.boolean().optional() }),
+    z.object({ enabled: z.boolean().optional(), cooldownMinutes: z.number().int().max(1440).refine((m) => m === 0 || m >= 30, 'Pick no time limit, or at least 30 minutes').optional(), replaceCode: z.boolean().optional() }),
   );
   const [row] = await db.query<SettingsRow>(
     `UPDATE settings SET self_scan_enabled = coalesce($1, self_scan_enabled),
