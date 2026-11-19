@@ -38,7 +38,7 @@ export function Home() {
             </span>
             <span className="group-text">
               <strong>Claim your free coffee</strong>
-              <span>Show your reward QR to the barista.</span>
+              <span>Show your Rewards screen to the barista.</span>
             </span>
             <Icon name="chevronRight" className="group-chev" />
           </Link>

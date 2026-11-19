@@ -91,7 +91,7 @@ export function CounterStamp() {
           <h1 className="display">{result.completed ? 'Your free coffee is ready!' : 'Sticker collected!'}</h1>
           <p className="muted">
             {result.completed
-              ? 'Show your QR to the barista next time to claim it.'
+              ? 'Show your Rewards screen to the barista to claim it.'
               : `${max - result.customer.stamps} more ${max - result.customer.stamps === 1 ? 'cup' : 'cups'} to your free coffee.`}
           </p>
           <Link to="/app" className="btn btn-primary btn-lg btn-block btn-cta">
@@ -112,10 +112,10 @@ export function CounterStamp() {
             {result.code === 'too_soon' ? 'Already Collected' : result.code === 'card_full' ? 'Your Card Is Full' : "That Didn't Work"}
           </h1>
           <p className="muted">{result.message}</p>
-          <Link to={result.code === 'card_full' ? '/app/qr' : '/app'} className="btn btn-primary btn-lg btn-block btn-cta">
-            {result.code === 'card_full' ? 'Show my QR' : 'See my card'}
+          <Link to={result.code === 'card_full' ? '/app/rewards' : '/app'} className="btn btn-primary btn-lg btn-block btn-cta">
+            {result.code === 'card_full' ? 'Claim my free coffee' : 'See my card'}
             <span className="btn-orb">
-              <Icon name={result.code === 'card_full' ? 'qr' : 'arrowRight'} />
+              <Icon name={result.code === 'card_full' ? 'gift' : 'arrowRight'} />
             </span>
           </Link>
         </div>

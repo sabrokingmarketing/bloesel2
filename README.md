@@ -1,6 +1,6 @@
 # Bloeisel Koffie Loyalty
 
-A mobile-first digital stamp card for Bloeisel Koffie: customers collect a sticker with every coffee and the 10th cup is free. Staff scan the customer's pink QR code at the till to add stickers and redeem rewards. Cards sync across devices through a small API and a Postgres database.
+A mobile-first digital stamp card for Bloeisel Koffie: customers collect a sticker with every coffee and the 10th cup is free. Customers collect stickers by scanning the counter QR by the till. Staff redeem the free coffee (and can add or correct stickers) from the member's page in Admin → Customers. Cards sync across devices through a small API and a Postgres database.
 
 ## Run it locally
 
@@ -57,7 +57,7 @@ The deployed app refuses to start without a real database, session secret and ad
 
 ### Counter sticker QR
 
-Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. The window can also be set to **No time limit**, where every scan adds a sticker; the panel then shows a warning, because a customer could keep scanning. The printed code itself never expires. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. Redeeming the free coffee still happens at the till.
+Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. The window can also be set to **No time limit**, where every scan adds a sticker; the panel then shows a warning, because a customer could keep scanning. The printed code itself never expires. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. The free coffee is redeemed by staff from Admin → Customers: the customer shows their Rewards screen (name and member code) and staff tap **Redeem reward**.
 
 ### Backups
 

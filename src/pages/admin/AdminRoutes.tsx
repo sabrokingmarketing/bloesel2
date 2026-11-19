@@ -6,7 +6,6 @@ import { AdminLogin } from './AdminLogin';
 import { Customers } from './Customers';
 import { Dashboard } from './Dashboard';
 import { QRCodes } from './QRCodes';
-import { Scan } from './Scan';
 import { SettingsPage } from './Settings';
 
 export default function AdminRoutes() {
@@ -23,7 +22,7 @@ export default function AdminRoutes() {
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
-        <Route path="scan" element={<Scan />} />
+        <Route path="scan" element={<Navigate to="/admin/customers" replace />} />
         <Route path="customers" element={<Customers />} />
         <Route path="qr-codes" element={<QRCodes />} />
         <Route path="settings" element={<SettingsPage />} />

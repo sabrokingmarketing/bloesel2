@@ -187,7 +187,7 @@ export function Dashboard() {
                       <span>{left <= 0 ? 'Free coffee ready' : `Last seen ${timeAgo(c.lastVisit).toLowerCase()}`}</span>
                     </div>
                     {left <= 0 ? (
-                      <Link to={`/admin/scan?code=${c.code}`} className="btn btn-sm btn-dark">
+                      <Link to={`/admin/customers?open=${c.id}`} className="btn btn-sm btn-dark">
                         Redeem
                       </Link>
                     ) : (

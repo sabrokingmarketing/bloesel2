@@ -7,7 +7,6 @@ import { initials } from '../../lib/format';
 
 const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
   { to: '/admin', label: 'Dashboard', icon: 'dashboard', end: true },
-  { to: '/admin/scan', label: 'Scan & stamp', icon: 'scan' },
   { to: '/admin/customers', label: 'Customers', icon: 'users' },
   { to: '/admin/qr-codes', label: 'QR codes', icon: 'qr' },
   { to: '/admin/settings', label: 'Settings', icon: 'settings' },
@@ -15,7 +14,6 @@ const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> =
 
 const TITLES: Record<string, [string, string]> = {
   '/admin': ['Welcome back', 'Here is how the bar is blooming today'],
-  '/admin/scan': ['Scan & stamp', 'Scan a member QR to add a sticker'],
   '/admin/customers': ['Customers', 'Everyone collecting stickers at Bloeisel'],
   '/admin/qr-codes': ['QR codes', 'Branded codes for your counter, tables and windows'],
   '/admin/settings': ['Settings', 'Shape the loyalty programme'],
@@ -134,11 +132,6 @@ export function AdminLayout() {
         </main>
       </div>
 
-      {location.pathname !== '/admin/scan' && (
-        <Link to="/admin/scan" className="ad-fab" aria-label="Scan a member">
-          <Icon name="scan" />
-        </Link>
-      )}
     </div>
   );
 }
