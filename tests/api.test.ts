@@ -268,6 +268,18 @@ describe('counter QR (customer scans to collect a sticker)', () => {
     expect(me.data.activity[0].note).toBe('Counter QR');
   });
 
+  it('with no time limit, every scan adds a sticker', async () => {
+    const cookie = await staff();
+    const { code } = await counter(cookie);
+    await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 0 } });
+    expect((await counter(cookie)).cooldownMinutes).toBe(0);
+    const { token } = await join();
+    expect((await scan(token, code)).status).toBe(200);
+    const again = await scan(token, code);
+    expect(again.status).toBe(200);
+    expect(again.data.customer.stamps).toBe(2);
+  });
+
   it('rejects a wrong or replaced code', async () => {
     const cookie = await staff();
     const old = (await counter(cookie)).code;
@@ -581,9 +593,10 @@ describe('staff sign-in hardening', () => {
     expect((await call('PATCH', '/api/admin/settings', { cookie, body: { pin: '4829' } })).status).toBe(400);
   });
 
-  it('the counter QR time limit cannot go below 30 minutes', async () => {
+  it('the counter QR time limit is either off or at least 30 minutes', async () => {
     const cookie = await staff();
-    expect((await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 0 } })).status).toBe(400);
+    expect((await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 10 } })).status).toBe(400);
+    expect((await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 0 } })).status).toBe(200);
     expect((await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 60 } })).status).toBe(200);
   });
 });

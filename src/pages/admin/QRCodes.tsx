@@ -61,6 +61,7 @@ p{margin:0;font-size:13px;font-weight:500}
 }
 
 const COOLDOWNS: Array<[number, string]> = [
+  [0, 'No time limit'],
   [30, '30 minutes'],
   [60, '1 hour'],
   [120, '2 hours'],
@@ -125,7 +126,7 @@ function CounterPanel() {
           customers create a card first, then get the sticker.
         </p>
         <div className="field counter-panel-field">
-          <label htmlFor="cooldown">One sticker per card every</label>
+          <label htmlFor="cooldown">Time between stickers</label>
           <select
             id="cooldown"
             className="select"
@@ -139,9 +140,15 @@ function CounterPanel() {
               </option>
             ))}
           </select>
-          <span className="field-hint">
-            <Icon name="shield" size={13} /> Stops a photo of the poster being used from home to collect more than one sticker per visit.
-          </span>
+          {counter.cooldownMinutes === 0 ? (
+            <span className="field-hint counter-warn">
+              <Icon name="info" size={13} /> No limit: every scan adds a sticker, so a customer could scan again and again, or use a photo of the poster at home. Keep an eye on Recent Activity.
+            </span>
+          ) : (
+            <span className="field-hint">
+              <Icon name="shield" size={13} /> One sticker per card in this time. Stops a photo of the poster being used from home to collect more than one sticker per visit.
+            </span>
+          )}
         </div>
         <div className="counter-panel-actions">
           <button
