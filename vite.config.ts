@@ -22,5 +22,6 @@ export default defineConfig({
   server: { host: true, port: 5173 },
   // Same headers as production (vercel.json), so CSP problems show up locally.
   preview: { headers: SECURITY_HEADERS },
-  test: { include: ['tests/**/*.test.ts'], environment: 'node', testTimeout: 20000, fileParallelism: false },
+  // FORGOT_MIN_MS=0: tests don't wait out the forgot-PIN timing pad (covered by its own test).
+  test: { include: ['tests/**/*.test.ts'], environment: 'node', testTimeout: 20000, fileParallelism: false, env: { FORGOT_MIN_MS: '0' } },
 });

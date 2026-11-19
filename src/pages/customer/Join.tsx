@@ -5,7 +5,7 @@ import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { Logo } from '../../components/Logo';
 import { PinField, pinProblem } from '../../components/PinField';
-import { ApiError, forgotPin, getPendingCounterCode, joinProgramme, refreshMe, signIn, useMe } from '../../data/store';
+import { ApiError, forgotPin, getPendingCounterCode, joinProgramme, refreshMe, signIn, useConfig, useMe } from '../../data/store';
 
 const validPhone = (p: string) => {
   const d = p.replace(/\D/g, '');
@@ -16,6 +16,7 @@ type Mode = 'join' | 'signin' | 'forgot';
 
 export function Join() {
   const me = useMe();
+  const stickers = useConfig()?.stampsRequired ?? 10;
   const navigate = useNavigate();
   const toast = useToast();
   const [params] = useSearchParams();
@@ -24,7 +25,8 @@ export function Join() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
-  const [consent, setConsent] = useState(true);
+  // Marketing consent is opt-in (POPIA/GDPR): never pre-ticked.
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export function Join() {
           </div>
           <div className="join-art-copy">
             <h2 className="display">
-              Ten stickers. <span className="heading-accent">One free cup.</span>
+              {stickers} stickers. <span className="heading-accent">One free cup.</span>
             </h2>
             <p>Your Bloeisel card lives on your phone. Nothing to download, nothing to lose.</p>
           </div>

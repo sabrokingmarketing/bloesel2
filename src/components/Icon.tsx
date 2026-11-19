@@ -40,7 +40,7 @@ import {
   Printer,
   QrCode,
   RefreshCw,
-  ScanQrCode,
+  ScanLine,
   Search,
   Settings,
   ShieldCheck,
@@ -50,6 +50,7 @@ import {
   Trash2,
   TrendingUp,
   User,
+  UserPlus,
   Users,
   WalletCards,
   X,
@@ -61,9 +62,10 @@ const ICONS = {
   dashboard: LayoutDashboard,
   card: WalletCards,
   qr: QrCode,
-  scan: ScanQrCode,
+  scan: ScanLine,
   gift: Gift,
   user: User,
+  userPlus: UserPlus,
   users: Users,
   chart: ChartLine,
   settings: Settings,
@@ -109,7 +111,11 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export function Icon({ name, size, className, strokeWidth = 1.75 }: { name: IconName; size?: number; className?: string; strokeWidth?: number }) {
+/**
+ * absoluteStrokeWidth keeps the line weight identical at every size (Lucide
+ * otherwise thickens big icons and thins small ones), so icons in one row match.
+ */
+export function Icon({ name, size, className, strokeWidth = 1.6 }: { name: IconName; size?: number; className?: string; strokeWidth?: number }) {
   const Glyph = ICONS[name];
-  return <Glyph size={size} className={className} strokeWidth={strokeWidth} aria-hidden="true" focusable="false" />;
+  return <Glyph size={size} className={className} strokeWidth={strokeWidth} absoluteStrokeWidth aria-hidden="true" focusable="false" />;
 }

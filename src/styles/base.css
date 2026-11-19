@@ -619,3 +619,15 @@ h3,
 .sheet:focus-visible {
   outline: none;
 }
+
+/* Icons never get squeezed by their container. */
+svg.lucide {
+  flex-shrink: 0;
+}
+.chip {
+  flex-shrink: 0;
+}
+/* Domains and other literal text keep their case inside Title Case rows. */
+.no-caps {
+  text-transform: none !important;
+}

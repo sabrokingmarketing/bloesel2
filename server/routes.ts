@@ -16,7 +16,7 @@ import {
   unauthorized,
   type Ctx,
 } from './http.js';
-import { appUrl, emailConfigured, pinResetEmail, sendEmail } from './email.js';
+import { appUrl, emailChangedNotice, emailConfigured, pinResetEmail, sendEmail } from './email.js';
 import { isDeployed } from './env.js';
 import { ensureSchema } from './schema.js';
 import {
@@ -32,6 +32,7 @@ import {
   memberCode,
   newCounterCode,
   safeEqual,
+  takeAttempt,
   newToken,
   phoneKey,
   STAFF_COOKIE,
@@ -98,6 +99,7 @@ type SettingsRow = {
   counter_code: string;
   self_scan_enabled: boolean;
   self_scan_cooldown_minutes: number;
+  staff_session_epoch: number;
 };
 
 function toCounter(r: SettingsRow) {
@@ -147,7 +149,7 @@ const idempotencyKey = z.string().trim().min(8).max(100);
 
 async function requireStaff(ctx: Ctx, q: Queryable) {
   const s = await loadSettings(q);
-  if (!verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash)) throw unauthorized('Staff sign-in required');
+  if (!verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash, Number(s.staff_session_epoch))) throw unauthorized('Staff sign-in required');
   return s;
 }
 
@@ -197,6 +199,20 @@ async function requireCustomer(ctx: Ctx, q: Queryable) {
   return { customer: row, tokenHash: hash };
 }
 
+/**
+ * Before changing the PIN, phone, email, or deleting the card, a member who has
+ * a PIN must type it again, so a borrowed or stolen session can't take the
+ * card over. Attempts are limited per card.
+ */
+async function confirmCurrentPin(db: Db, customer: Row, provided: string | undefined) {
+  if (!customer.pin_hash) return;
+  if (!provided || !/^\d{4}$/.test(provided)) throw new HttpError(401, 'pin_required', 'Enter your current PIN to make this change.');
+  const bucket = `pin-confirm:${customer.id}`;
+  if (!(await takeAttempt(db, bucket, 5, 900))) throw tooMany('Too many wrong PINs. Try again in 15 minutes.');
+  if (!(await verifyPin(provided, String(customer.pin_hash)))) throw new HttpError(401, 'wrong_pin', "That PIN isn't right.");
+  await clearRateLimit(db, bucket);
+}
+
 /** Signs this phone in to a card: a fresh device token in the 120-day cookie. */
 async function issueDevice(ctx: Ctx, q: Queryable, customerId: string) {
   const token = newToken();
@@ -240,7 +256,7 @@ async function mutateCard(
   try {
     return await db.tx(async (q) => {
       if (key) {
-        const [prev] = await q.query('SELECT 1 FROM activity WHERE idempotency_key = $1', [key]);
+        const [prev] = await q.query('SELECT 1 FROM activity WHERE idempotency_key = $1 AND customer_id = $2', [key, customerId]);
         if (prev) return { customer: toCustomer((await q.query('SELECT * FROM customers WHERE id = $1', [customerId]))[0]!), replayed: true };
       }
       const [c] = await q.query('SELECT * FROM customers WHERE id = $1 FOR UPDATE', [customerId]);
@@ -293,7 +309,12 @@ route('POST', '/api/join', async (ctx, db) => {
   const key = phoneKey(input.phone)!;
   return db.tx(async (q) => {
     const [taken] = await q.query('SELECT 1 FROM customers WHERE phone_key = $1', [key]);
-    if (taken) throw conflict('That number already has a card. Sign in with your mobile number and PIN instead.', 'phone_taken');
+    if (taken) {
+      // Telling a member "you already have a card" also tells a stranger the number is registered,
+      // so cap how often one network can ask.
+      if (!(await takeAttempt(q, `join-taken:${ctx.ip}`, 10, 3600))) throw tooMany('Too many attempts from this network. Try again later.');
+      throw conflict('That number already has a card. Sign in with your mobile number and PIN instead.', 'phone_taken');
+    }
     const pinHash = await hashPin(input.pin);
     let row: Row | undefined;
     for (let attempt = 0; !row && attempt < 5; attempt++) {
@@ -311,23 +332,46 @@ route('POST', '/api/join', async (ctx, db) => {
 });
 
 route('GET', '/api/me', async (ctx, db) => {
+  // No session at all is a normal state (a new visitor), not an error: answer quietly.
+  if (!getCookie(ctx.req, CARD_COOKIE) && !ctx.req.headers.get('authorization')) return json({ signedIn: false });
   const { customer } = await requireCustomer(ctx, db);
   return json(await meData(db, String(customer.id)));
 });
 
 route('PATCH', '/api/me', async (ctx, db) => {
   const { customer } = await requireCustomer(ctx, db);
-  const input = await body(ctx, z.object({ name: name.optional(), phone: phone.optional(), email }));
+  const input = await body(
+    ctx,
+    z.object({
+      name: name.optional(),
+      phone: phone.optional(),
+      // Absent = leave as is; '' = remove; otherwise a new address.
+      email: z.union([z.literal(''), z.string().trim().max(254).email('That email looks off')]).optional(),
+      currentPin: z.string().max(8).optional(),
+    }),
+  );
   const key = input.phone ? phoneKey(input.phone) : null;
-  if (key) {
+  const phoneChanging = !!key && key !== customer.phone_key;
+  const oldEmail = (customer.email as string | null) ?? null;
+  const newEmail = input.email === undefined ? oldEmail : input.email || null;
+  const emailChanging = (newEmail ?? '').toLowerCase() !== (oldEmail ?? '').toLowerCase();
+  // The phone number signs in and the email receives reset links: both need the current PIN.
+  if (phoneChanging || emailChanging) await confirmCurrentPin(db, customer, input.currentPin);
+  if (phoneChanging) {
     const [other] = await db.query('SELECT 1 FROM customers WHERE phone_key = $1 AND id <> $2', [key, customer.id]);
     if (other) throw conflict('That number is already linked to another card', 'phone_taken');
   }
   await db.query(
     `UPDATE customers SET name = coalesce($2, name), phone = coalesce($3, phone), phone_key = coalesce($4, phone_key),
        email = $5, updated_at = now() WHERE id = $1`,
-    [customer.id, input.name ?? null, input.phone ?? null, key, input.email ?? null],
+    [customer.id, input.name ?? null, input.phone ?? null, key, newEmail],
   );
+  if (emailChanging && oldEmail) {
+    // Best effort: tell the old address, so a takeover can't quietly redirect reset links.
+    await sendEmail(emailChangedNotice(oldEmail, String(customer.name).split(' ')[0] ?? '')).catch((err) =>
+      console.error(JSON.stringify({ level: 'error', requestId: ctx.requestId, msg: 'email change notice failed', detail: (err as Error).message })),
+    );
+  }
   return json(await meData(db, String(customer.id)));
 });
 
@@ -346,11 +390,31 @@ route('DELETE', '/api/me/device', async (ctx, db) => {
 
 /** Set or change the sign-in PIN. Holding the signed-in phone is the proof of identity. */
 route('PUT', '/api/me/pin', async (ctx, db) => {
-  const { customer } = await requireCustomer(ctx, db);
-  const input = await body(ctx, z.object({ pin }));
+  const { customer, tokenHash } = await requireCustomer(ctx, db);
+  const input = await body(ctx, z.object({ pin, currentPin: z.string().max(8).optional() }));
+  await confirmCurrentPin(db, customer, input.currentPin);
   if (await hitRateLimit(db, `setpin:${customer.id}`, 10, 3600)) throw tooMany('Too many PIN changes. Try again later.');
   await db.query('UPDATE customers SET pin_hash = $2, updated_at = now() WHERE id = $1', [customer.id, await hashPin(input.pin)]);
+  // A new PIN ends every other session, so anyone who knew the old one is out.
+  await db.query('DELETE FROM device_tokens WHERE customer_id = $1 AND token_hash <> $2', [customer.id, tokenHash]);
   return json(await meData(db, String(customer.id)));
+});
+
+/** Signs out every phone except this one. */
+route('POST', '/api/me/signout-others', async (ctx, db) => {
+  const { customer, tokenHash } = await requireCustomer(ctx, db);
+  const rows = await db.query('DELETE FROM device_tokens WHERE customer_id = $1 AND token_hash <> $2 RETURNING 1', [customer.id, tokenHash]);
+  return json({ signedOut: rows.length });
+});
+
+/** Deletes the card and everything about it (visits, phones, reset links). */
+route('DELETE', '/api/me', async (ctx, db) => {
+  const { customer } = await requireCustomer(ctx, db);
+  const input = await body(ctx, z.object({ currentPin: z.string().max(8).optional() }));
+  await confirmCurrentPin(db, customer, input.currentPin);
+  await db.query('DELETE FROM customers WHERE id = $1', [customer.id]);
+  clearCardCookie(ctx);
+  return json({ ok: true });
 });
 
 /**
@@ -365,7 +429,7 @@ route('POST', '/api/me/counter-stamp', async (ctx, db) => {
   const s = await loadSettings(db);
   if (!s.self_scan_enabled) throw new HttpError(403, 'self_scan_off', 'Scanning at the counter is switched off right now. Show your QR to the barista instead.');
   if (!safeEqual(input.code, s.counter_code)) {
-    throw new HttpError(403, 'bad_code', 'This counter code has been replaced. Scan the QR code at the counter, or show your QR to the barista.');
+    throw new HttpError(403, 'bad_code', "This QR code isn't valid any more. Scan the code by the till, or ask your barista.");
   }
   const cooldown = Number(s.self_scan_cooldown_minutes);
   const res = await mutateCard(db, String(customer.id), input.idempotencyKey, (c, max) => {
@@ -413,6 +477,7 @@ route('POST', '/api/claim', async (ctx, db) => {
 
 const SIGNIN_FAILS = 5;
 const SIGNIN_WINDOW_MIN = 15;
+const SIGNIN_DAILY_CAP = 20;
 // Compared against when the number has no card, so a wrong number takes as long as a wrong PIN.
 let decoyPinHash: Promise<string> | null = null;
 
@@ -420,21 +485,24 @@ route('POST', '/api/signin', async (ctx, db) => {
   const input = await body(ctx, z.object({ phone, pin: z.string().regex(/^\d{4}$/, 'Your PIN is 4 digits') }));
   if (await hitRateLimit(db, `signin-ip:${ctx.ip}`, 100, 900)) throw tooMany('Too many sign-in attempts from this network. Try again in 15 minutes.');
   const key = phoneKey(input.phone)!;
-  const bucket = `signin:${key}`;
-  const [{ n }] = (await db.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM rate_events WHERE bucket = $1 AND at > now() - make_interval(mins => $2)`,
-    [bucket, SIGNIN_WINDOW_MIN],
-  )) as [{ n: number }];
-  if (n >= SIGNIN_FAILS) throw tooMany(`Too many wrong PINs for this number. Wait ${SIGNIN_WINDOW_MIN} minutes, or reset your PIN by email.`);
+  // Each try is counted BEFORE the PIN is checked, atomically, so parallel guesses can't skip the limit.
+  // Per number+network: someone else on another network can't lock you out with wrong guesses.
+  const pairBucket = `signin:${key}:${ctx.ip}`;
+  if (!(await takeAttempt(db, pairBucket, SIGNIN_FAILS, SIGNIN_WINDOW_MIN * 60))) {
+    throw tooMany(`Too many wrong PINs. Wait ${SIGNIN_WINDOW_MIN} minutes, or reset your PIN by email.`);
+  }
+  // Per number across all networks: caps a spread-out guessing attack at 20 tries a day.
+  const dayBucket = `signin-day:${key}`;
+  if (!(await takeAttempt(db, dayBucket, SIGNIN_DAILY_CAP, 86_400))) {
+    throw tooMany('Too many sign-in attempts for this number today. Reset your PIN by email, or ask your barista.');
+  }
 
   const [c] = await db.query('SELECT * FROM customers WHERE phone_key = $1', [key]);
   if (!decoyPinHash) decoyPinHash = hashPin('decoy-pin');
   const ok = await verifyPin(input.pin, c?.pin_hash ? String(c.pin_hash) : await decoyPinHash);
-  if (!c || !c.pin_hash || !ok) {
-    await db.query('INSERT INTO rate_events (bucket) VALUES ($1)', [bucket]);
-    throw new HttpError(401, 'bad_signin', "That mobile number and PIN don't match.");
-  }
-  await clearRateLimit(db, bucket);
+  if (!c || !c.pin_hash || !ok) throw new HttpError(401, 'bad_signin', "That mobile number and PIN don't match.");
+  await clearRateLimit(db, pairBucket);
+  await clearRateLimit(db, dayBucket);
   // Signing in adds this phone; other phones stay signed in.
   await issueDevice(ctx, db, String(c.id));
   return json(await meData(db, String(c.id)));
@@ -460,6 +528,7 @@ route('POST', '/api/pin/forgot', async (ctx, db) => {
   // Quietly cap emails per address; the reply stays the same so it reveals nothing.
   if (await hitRateLimit(db, `forgot:${address}`, 3, 3600)) return json(FORGOT_REPLY);
 
+  const started = Date.now();
   const cards = await db.query('SELECT id, name, email FROM customers WHERE lower(email) = $1 LIMIT 3', [address]);
   const base = appUrl(ctx.url.origin);
   for (const c of cards) {
@@ -471,8 +540,16 @@ route('POST', '/api/pin/forgot', async (ctx, db) => {
       RESET_MINUTES,
     ]);
     // The token travels in the #fragment, so it never reaches server logs or other sites via Referer.
-    await sendEmail(pinResetEmail(String(c.email), String(c.name).split(' ')[0] ?? '', `${base}/app/reset#${token}`, RESET_MINUTES));
+    try {
+      await sendEmail(pinResetEmail(String(c.email), String(c.name).split(' ')[0] ?? '', `${base}/app/reset#${token}`, RESET_MINUTES));
+    } catch (err) {
+      // Logged without the address; the reply below is unchanged so it reveals nothing.
+      console.error(JSON.stringify({ level: 'error', requestId: ctx.requestId, msg: 'PIN reset email failed', detail: (err as Error).message }));
+    }
   }
+  // Pad every reply to the same minimum time, so response speed doesn't reveal whether an email was sent.
+  const wait = Number(process.env.FORGOT_MIN_MS ?? 1500) - (Date.now() - started);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   return json(FORGOT_REPLY);
 });
 
@@ -489,7 +566,11 @@ route('POST', '/api/pin/reset', async (ctx, db) => {
     const customerId = String(r.customer_id);
     await q.query('UPDATE customers SET pin_hash = $2, updated_at = now() WHERE id = $1', [customerId, await hashPin(input.pin)]);
     await q.query('DELETE FROM device_tokens WHERE customer_id = $1', [customerId]);
-    await q.query(`DELETE FROM rate_events WHERE bucket = (SELECT 'signin:' || phone_key FROM customers WHERE id = $1)`, [customerId]);
+    await q.query(
+      `DELETE FROM rate_events WHERE bucket IN (SELECT 'signin-day:' || phone_key FROM customers WHERE id = $1)
+         OR bucket LIKE (SELECT 'signin:' || phone_key || ':%' FROM customers WHERE id = $1)`,
+      [customerId],
+    );
     await issueDevice(ctx, q, customerId);
     return json(await meData(q, customerId));
   });
@@ -500,18 +581,13 @@ route('POST', '/api/pin/reset', async (ctx, db) => {
 route('POST', '/api/admin/login', async (ctx, db) => {
   const { pin } = await body(ctx, z.object({ pin: z.string().regex(/^\d{4,8}$/, 'PIN must be 4 to 8 digits') }));
   const bucket = `login:${ctx.ip}`;
-  const [{ n }] = (await db.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM rate_events WHERE bucket = $1 AND at > now() - interval '15 minutes'`,
-    [bucket],
-  )) as [{ n: number }];
-  if (n >= 5) throw tooMany('Too many wrong PINs. Wait 15 minutes and try again.');
+  // Counted before the PIN check, atomically, so parallel guesses can't skip the limit.
+  if (!(await takeAttempt(db, bucket, 5, 900))) throw tooMany('Too many wrong PINs. Wait 15 minutes and try again.');
+  if (!(await takeAttempt(db, 'login-all', 300, 86_400))) throw tooMany('Staff sign-in is paused after too many attempts today. Try again tomorrow.');
   const s = await loadSettings(db);
-  if (!(await verifyPin(pin, s.admin_pin_hash))) {
-    await db.query('INSERT INTO rate_events (bucket) VALUES ($1)', [bucket]);
-    throw new HttpError(401, 'wrong_pin', 'That PIN is not right');
-  }
+  if (!(await verifyPin(pin, s.admin_pin_hash))) throw new HttpError(401, 'wrong_pin', 'That PIN is not right');
   await clearRateLimit(db, bucket);
-  const session = issueStaffSession(s.admin_pin_hash);
+  const session = issueStaffSession(s.admin_pin_hash, Number(s.staff_session_epoch));
   ctx.setHeaders.append('set-cookie', cookie(STAFF_COOKIE, session.value, session.maxAge));
   return json({ ok: true });
 });
@@ -521,9 +597,18 @@ route('POST', '/api/admin/logout', async (ctx) => {
   return json({ ok: true });
 });
 
+/** Ends every staff session (e.g. a till was lost or someone left); this till stays signed in. */
+route('POST', '/api/admin/logout-all', async (ctx, db) => {
+  await requireStaff(ctx, db);
+  const [s] = await db.query<SettingsRow>('UPDATE settings SET staff_session_epoch = staff_session_epoch + 1 WHERE id = 1 RETURNING *');
+  const session = issueStaffSession(s!.admin_pin_hash, Number(s!.staff_session_epoch));
+  ctx.setHeaders.append('set-cookie', cookie(STAFF_COOKIE, session.value, session.maxAge));
+  return json({ ok: true });
+});
+
 route('GET', '/api/admin/session', async (ctx, db) => {
   const s = await loadSettings(db);
-  return json({ authed: verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash) });
+  return json({ authed: verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash, Number(s.staff_session_epoch)) });
 });
 
 /** Everything the staff portal shows. Sized for a single café; paginate if it grows past these caps. */
@@ -685,7 +770,7 @@ route('PATCH', '/api/admin/settings', async (ctx, db) => {
       storeName: z.string().trim().min(2).max(60).optional(),
       stampsRequired: z.number().int().min(5).max(12).optional(),
       rewardName: z.string().trim().min(2).max(60).optional(),
-      pin: z.string().regex(/^\d{4,8}$/, 'PIN must be 4 to 8 digits').optional(),
+      pin: z.string().regex(/^\d{6,8}$/, 'Use 6 to 8 digits for the team PIN').optional(),
     }),
   );
   const pinHash = input.pin ? await hashPin(input.pin) : null;
@@ -697,7 +782,7 @@ route('PATCH', '/api/admin/settings', async (ctx, db) => {
   );
   if (pinHash) {
     // A new PIN signs out every other till; keep this one signed in.
-    const session = issueStaffSession(pinHash);
+    const session = issueStaffSession(pinHash, Number(row!.staff_session_epoch));
     ctx.setHeaders.append('set-cookie', cookie(STAFF_COOKIE, session.value, session.maxAge));
   }
   return json({ settings: toSettings(row!) });
@@ -707,7 +792,7 @@ route('PATCH', '/api/admin/counter', async (ctx, db) => {
   await requireStaff(ctx, db);
   const input = await body(
     ctx,
-    z.object({ enabled: z.boolean().optional(), cooldownMinutes: z.number().int().min(0).max(1440).optional(), replaceCode: z.boolean().optional() }),
+    z.object({ enabled: z.boolean().optional(), cooldownMinutes: z.number().int().min(30, 'At least 30 minutes, so a photo of the poster cannot be reused at home').max(1440).optional(), replaceCode: z.boolean().optional() }),
   );
   const [row] = await db.query<SettingsRow>(
     `UPDATE settings SET self_scan_enabled = coalesce($1, self_scan_enabled),

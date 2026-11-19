@@ -51,6 +51,23 @@ export function appUrl(requestOrigin: string) {
 
 const esc = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
+export function emailChangedNotice(to: string, firstName: string): Email {
+  const name = esc(firstName);
+  return {
+    to,
+    subject: 'The email on your Bloeisel card was changed',
+    text: `Hi ${firstName},\n\nThe email address on your Bloeisel loyalty card was just changed, so PIN reset emails will now go to the new address.\n\nIf this wasn't you, ask your barista to help secure your card.\n\nBloeisel Koffie`,
+    html: `<!doctype html><html><body style="margin:0;background:#f6f4f3;font-family:Poppins,Segoe UI,Arial,sans-serif;color:#2e1a16">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:20px;padding:32px">
+<tr><td style="font-size:26px;font-weight:700;color:#ff66c4;font-style:italic">Bloeisel</td></tr>
+<tr><td style="padding-top:20px;font-size:22px;font-weight:700">Your card's email was changed</td></tr>
+<tr><td style="padding-top:12px;font-size:15px;line-height:1.6;color:#6e5249">Hi ${name}, the email address on your Bloeisel loyalty card was just changed, so PIN reset emails will now go to the new address.</td></tr>
+<tr><td style="padding-top:16px;font-size:15px;line-height:1.6;color:#6e5249">If this wasn't you, ask your barista to help secure your card.</td></tr>
+</table></td></tr></table></body></html>`,
+  };
+}
+
 export function pinResetEmail(to: string, firstName: string, link: string, minutes: number): Email {
   const name = esc(firstName);
   return {

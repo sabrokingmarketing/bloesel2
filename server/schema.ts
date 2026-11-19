@@ -115,6 +115,14 @@ const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
       CREATE INDEX pin_resets_customer ON pin_resets (customer_id)
     `,
   },
+  {
+    id: 4,
+    name: 'staff_session_epoch_and_counter_floor',
+    sql: `
+      ALTER TABLE settings ADD COLUMN staff_session_epoch integer NOT NULL DEFAULT 0;
+      UPDATE settings SET self_scan_cooldown_minutes = 60 WHERE self_scan_cooldown_minutes < 30
+    `,
+  },
 ];
 
 let ready: Promise<void> | null = null;

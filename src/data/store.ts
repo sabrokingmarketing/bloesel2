@@ -127,6 +127,28 @@ function usePolling(refresh: () => void, ms: number, enabled = true) {
   }, [refresh, ms, enabled]);
 }
 
+/* ======================= Public programme settings ======================= */
+
+let config: Settings | null = null;
+let configLoad: Promise<void> | null = null;
+/** Store name, stickers per reward and reward name, for public pages with no card loaded. */
+export function useConfig() {
+  const snap = useSyncExternalStore(subscribe, () => config);
+  useEffect(() => {
+    if (!config && !configLoad) {
+      configLoad = api<Settings>('GET', '/api/config')
+        .then((c) => {
+          config = c;
+          emit();
+        })
+        .catch(() => {
+          configLoad = null;
+        });
+    }
+  }, []);
+  return snap;
+}
+
 /* ======================= Customer ======================= */
 
 export function useMe() {
@@ -141,8 +163,13 @@ export function useSessionCustomer() {
 let meInFlight: Promise<void> | null = null;
 export function refreshMe() {
   if (meInFlight) return meInFlight;
-  meInFlight = api<MeData>('GET', '/api/me', undefined, { device: true })
+  meInFlight = api<MeData | { signedIn: false }>('GET', '/api/me', undefined, { device: true })
     .then((data) => {
+      if ('signedIn' in data) {
+        // No card on this phone: a normal state for a new visitor.
+        setMe({ status: 'none', data: undefined, offline: false });
+        return;
+      }
       // The server has now set the cookie, so a pre-cookie token isn't needed any more.
       forgetLegacyToken();
       setMe({ status: 'ready', data, offline: false });
@@ -188,10 +215,22 @@ export async function signIn(phone: string, pin: string) {
   return signedIn(await api<MeData>('POST', '/api/signin', { phone, pin }));
 }
 
-/** Set or change the sign-in PIN for the card on this phone. */
-export async function setPin(pin: string) {
-  const data = await api<MeData>('PUT', '/api/me/pin', { pin }, { device: true });
+/** Set or change the sign-in PIN. Changing it needs the current PIN and signs out every other phone. */
+export async function setPin(pin: string, currentPin?: string) {
+  const data = await api<MeData>('PUT', '/api/me/pin', { pin, currentPin }, { device: true });
   setMe({ status: 'ready', data });
+}
+
+/** Signs out every other phone signed in to this card. */
+export function signOutOtherPhones() {
+  return api<{ signedOut: number }>('POST', '/api/me/signout-others', undefined, { device: true });
+}
+
+/** Deletes the card and all its data. Needs the current PIN when one is set. */
+export async function deleteMyCard(currentPin?: string) {
+  await api('DELETE', '/api/me', { currentPin }, { device: true });
+  forgetLegacyToken();
+  setMe({ status: 'none', data: undefined });
 }
 
 /** Emails a PIN reset link. The reply is the same whether or not the address is on a card. */
@@ -204,7 +243,7 @@ export async function resetPin(token: string, pin: string) {
   return signedIn(await api<MeData>('POST', '/api/pin/reset', { token, pin }));
 }
 
-export async function updateProfile(patch: { name?: string; phone?: string; email?: string }) {
+export async function updateProfile(patch: { name?: string; phone?: string; email?: string; currentPin?: string }) {
   const data = await api<MeData>('PATCH', '/api/me', patch, { device: true });
   setMe({ status: 'ready', data });
 }
@@ -306,6 +345,11 @@ export async function adminSignIn(pin: string) {
   await api('POST', '/api/admin/login', { pin });
   await refreshSnapshot();
   setAdmin({ auth: 'in' });
+}
+
+/** Ends every staff session except this till's (e.g. a tablet was lost). */
+export function adminSignOutEverywhere() {
+  return api('POST', '/api/admin/logout-all');
 }
 
 export async function adminSignOut() {

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
-import { updateSettings, useAdminDB, type ApiError } from '../../data/store';
+import { adminSignOutEverywhere, updateSettings, useAdminDB, type ApiError } from '../../data/store';
 import type { Customer } from '../../data/types';
 
 export function SettingsPage() {
@@ -28,7 +28,7 @@ export function SettingsPage() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    if (pin && !/^\d{4,8}$/.test(pin)) return toast('PIN must be 4 to 8 digits', 'info');
+    if (pin && !/^\d{6,8}$/.test(pin)) return toast('Use 6 to 8 digits for the team PIN', 'info');
     setBusy(true);
     try {
       await updateSettings({
@@ -74,7 +74,7 @@ export function SettingsPage() {
         <div className="field">
           <label htmlFor="s-pin">New team PIN</label>
           <input id="s-pin" className="input" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" placeholder="Leave blank to keep" />
-          <span className="field-hint">4 to 8 digits; 6 or more is safer. Changing it signs out every other till.</span>
+          <span className="field-hint">6 to 8 digits. Changing it signs out every other till.</span>
         </div>
         <button className="btn btn-dark" disabled={busy}>
           {busy ? 'Saving…' : 'Save settings'}
@@ -82,6 +82,23 @@ export function SettingsPage() {
       </form>
 
       <div className="settings-side">
+        <section className="card card-pad settings-security">
+          <h2 className="card-title">Staff sessions</h2>
+          <p className="faint settings-hint">Lost a tablet, or someone left the team? Sign every other till out straight away. This till stays signed in.</p>
+          <button
+            className="btn btn-ghost"
+            onClick={async () => {
+              try {
+                await adminSignOutEverywhere();
+                toast('Every other till was signed out', 'shield');
+              } catch (err) {
+                toast((err as ApiError).message, 'info');
+              }
+            }}
+          >
+            <Icon name="logout" /> Sign out all other tills
+          </button>
+        </section>
         <section className="card card-pad">
           <h2 className="card-title">Card preview</h2>
           <p className="faint settings-hint">How members will see a card with {stamps} stickers.</p>

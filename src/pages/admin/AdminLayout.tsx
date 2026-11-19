@@ -112,11 +112,11 @@ export function AdminLayout() {
           </form>
           <div className="ad-top-right">
             <Link to="/admin/customers?filter=ready" className="icon-btn" aria-label={`${readyCount} rewards ready`}>
-              <Icon name="bell" />
-              {readyCount > 0 && <span className="ad-bell-dot" />}
+              <Icon name="gift" />
+              {readyCount > 0 && <span className="ad-bell-count tabular">{readyCount}</span>}
             </Link>
             <div className="ad-user">
-              <span className="avatar">{initials('Bloeisel Barista')}</span>
+              <span className="avatar">{initials(db.settings.storeName)}</span>
               <div>
                 <span className="ad-user-role">On shift</span>
                 <strong>{db.settings.storeName}</strong>

@@ -124,8 +124,8 @@ export function Home() {
           <li>
             <span className="step-dot">3</span>
             <span className="group-text">
-              <strong>Enjoy cup {max} on us</strong>
-              <span>Show your reward QR at the till.</span>
+              <strong>Fill all {max}, then one on us</strong>
+              <span>Your next coffee is free. Show your reward QR at the till.</span>
             </span>
           </li>
         </ol>

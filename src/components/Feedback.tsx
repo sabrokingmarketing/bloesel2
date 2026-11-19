@@ -28,21 +28,60 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 export const useToast = () => useContext(ToastCtx);
 
+/** Open sheets, innermost last: only the top one reacts to Escape and Tab. */
+const openSheets: HTMLElement[] = [];
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * A modal sheet (bottom sheet on phones, centred dialog on larger screens).
+ * Focus moves in once when it opens, Tab stays inside it, Escape closes only
+ * the top-most sheet, and page scrolling stays locked until the last one closes.
+ */
 export function Sheet({ open, onClose, title, children, labelledBy }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; labelledBy?: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Parents often pass a fresh onClose every render (e.g. while data polls); keep the
+  // latest in a ref so re-renders never re-run the open effect and steal focus mid-typing.
+  const close = useRef(onClose);
+  close.current = onClose;
+
   useEffect(() => {
-    if (!open) return;
+    if (!open || !ref.current) return;
+    const el = ref.current;
     const prev = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    document.addEventListener('keydown', onKey);
+    openSheets.push(el);
     document.body.style.overflow = 'hidden';
-    ref.current?.focus();
+    el.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (openSheets[openSheets.length - 1] !== el) return;
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        close.current();
+      } else if (e.key === 'Tab') {
+        const items = [...el.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((n) => n.offsetParent !== null);
+        if (!items.length) return e.preventDefault();
+        const first = items[0]!;
+        const last = items[items.length - 1]!;
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || active === el)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !el.contains(active))) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      openSheets.splice(openSheets.indexOf(el), 1);
+      if (!openSheets.length) document.body.style.overflow = '';
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
+
   if (!open) return null;
   return (
     <>

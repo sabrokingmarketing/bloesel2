@@ -68,7 +68,10 @@ describe('customer cards', () => {
 
   it('rejects missing or forged device tokens', async () => {
     await join();
-    expect((await call('GET', '/api/me')).status).toBe(401);
+    // No session at all is a normal state: a quiet "not signed in", not an error.
+    const none = await call('GET', '/api/me');
+    expect(none.status).toBe(200);
+    expect(none.data).toEqual({ signedIn: false });
     expect((await call('GET', '/api/me', { token: 'not-a-real-token' })).status).toBe(401);
   });
 
@@ -88,7 +91,7 @@ describe('customer cards', () => {
   it('rejects a profile phone number that belongs to another member', async () => {
     const a = await join();
     await call('POST', '/api/join', { body: { name: 'Other', phone: '+27 71 444 0000', pin: PIN }, ip: '10.3.3.3' });
-    const res = await call('PATCH', '/api/me', { token: a.token, body: { phone: '071 444 0000' } });
+    const res = await call('PATCH', '/api/me', { token: a.token, body: { phone: '071 444 0000', currentPin: PIN } });
     expect(res.status).toBe(409);
   });
 
@@ -287,7 +290,7 @@ describe('counter QR (customer scans to collect a sticker)', () => {
 
   it('with no time limit, still stops at a full card', async () => {
     const cookie = await staff();
-    await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 0 } });
+    await pg.query('UPDATE settings SET self_scan_cooldown_minutes = 0');
     const { code } = await counter(cookie);
     const { token } = await join();
     for (let i = 0; i < 10; i++) expect((await scan(token, code)).status).toBe(200);
@@ -339,13 +342,32 @@ describe('PIN sign-in and the 120-day session', () => {
     expect(wrongPin.data).toEqual(wrongNumber.data);
   });
 
-  it('locks a number after 5 wrong PINs, without affecting other numbers', async () => {
+  it('locks a number on a network after 5 wrong PINs, without locking it elsewhere or affecting other numbers', async () => {
     const a = await join();
     const b = await join();
-    for (let i = 0; i < 5; i++) expect((await call('POST', '/api/signin', { body: { phone: a.phone, pin: '9137' }, ip: `10.8.0.${i}` })).status).toBe(401);
-    // Even the right PIN, from a different network, is refused while locked.
-    expect((await call('POST', '/api/signin', { body: { phone: a.phone, pin: PIN }, ip: '10.8.1.1' })).status).toBe(429);
-    expect((await call('POST', '/api/signin', { body: { phone: b.phone, pin: PIN }, ip: '10.8.1.1' })).status).toBe(200);
+    for (let i = 0; i < 5; i++) expect((await call('POST', '/api/signin', { body: { phone: a.phone, pin: '9137' }, ip: '10.8.0.1' })).status).toBe(401);
+    // Even the right PIN is refused from that network while it's locked...
+    expect((await call('POST', '/api/signin', { body: { phone: a.phone, pin: PIN }, ip: '10.8.0.1' })).status).toBe(429);
+    // ...but a stranger's wrong guesses don't lock the real member out on their own network,
+    expect((await call('POST', '/api/signin', { body: { phone: a.phone, pin: PIN }, ip: '10.8.1.1' })).status).toBe(200);
+    // and other numbers are unaffected.
+    expect((await call('POST', '/api/signin', { body: { phone: b.phone, pin: PIN }, ip: '10.8.0.1' })).status).toBe(200);
+  });
+
+  it('caps a number at 20 tries a day across all networks', async () => {
+    const a = await join();
+    for (let i = 0; i < 20; i++) expect((await call('POST', '/api/signin', { body: { phone: a.phone, pin: '9137' }, ip: `10.9.${i}.1` })).status).toBe(401);
+    const capped = await call('POST', '/api/signin', { body: { phone: a.phone, pin: PIN }, ip: '10.9.99.1' });
+    expect(capped.status).toBe(429);
+    expect(capped.data.error.message).toContain('today');
+  });
+
+  it('parallel PIN guesses cannot get past the limit', async () => {
+    const a = await join();
+    const guesses = Array.from({ length: 30 }, (_, i) => String(1000 + i * 7).padStart(4, '0')).filter((g) => g !== PIN);
+    const results = await Promise.all([...guesses, PIN].map((pin) => call('POST', '/api/signin', { body: { phone: a.phone, pin }, ip: '10.10.0.1' })));
+    const checked = results.filter((r) => r.status !== 429);
+    expect(checked.length).toBeLessThanOrEqual(5);
   });
 
   it('signs a phone out after 120 days without a visit', async () => {
@@ -471,5 +493,95 @@ describe('deployment config', () => {
     const sent = Object.fromEntries(v.headers[0].headers.map((h: { key: string; value: string }) => [h.key, h.value]));
     expect(v.headers[0].source).toBe('/(.*)');
     expect(sent).toEqual(SECURITY_HEADERS);
+  });
+});
+
+describe('protecting a card once someone is signed in', () => {
+  it('changing the PIN needs the current PIN and signs out every other phone', async () => {
+    const a = await join();
+    const other = await call('POST', '/api/signin', { body: { phone: a.phone, pin: PIN }, ip: '10.11.0.1' });
+    const otherToken = cardCookie(other)!.value;
+    expect((await call('PUT', '/api/me/pin', { token: a.token, body: { pin: '7193' } })).status).toBe(401);
+    expect((await call('PUT', '/api/me/pin', { token: a.token, body: { pin: '7193', currentPin: '9999' } })).status).toBe(401);
+    expect((await call('PUT', '/api/me/pin', { token: a.token, body: { pin: '7193', currentPin: PIN } })).status).toBe(200);
+    expect((await call('GET', '/api/me', { token: a.token })).status).toBe(200);
+    expect((await call('GET', '/api/me', { token: otherToken })).status).toBe(401);
+  });
+
+  it('changing the email or phone needs the current PIN, and the old address is told', async () => {
+    const a = await join({ email: 'owner@example.com' });
+    expect((await call('PATCH', '/api/me', { token: a.token, body: { email: 'thief@example.com' } })).status).toBe(401);
+    expect((await call('PATCH', '/api/me', { token: a.token, body: { phone: '+27 83 777 1212' } })).status).toBe(401);
+    const ok = await call('PATCH', '/api/me', { token: a.token, body: { email: 'new@example.com', currentPin: PIN } });
+    expect(ok.data.customer.email).toBe('new@example.com');
+    expect(outbox.map((m) => m.to)).toEqual(['owner@example.com']);
+    expect(outbox[0]!.subject).toContain('changed');
+  });
+
+  it('updating just the name keeps the email', async () => {
+    const a = await join({ email: 'keep@example.com' });
+    const res = await call('PATCH', '/api/me', { token: a.token, body: { name: 'New Name' } });
+    expect(res.data.customer.name).toBe('New Name');
+    expect(res.data.customer.email).toBe('keep@example.com');
+  });
+
+  it('a member can sign out every other phone', async () => {
+    const a = await join();
+    const other = cardCookie(await call('POST', '/api/signin', { body: { phone: a.phone, pin: PIN }, ip: '10.12.0.1' }))!.value;
+    const res = await call('POST', '/api/me/signout-others', { token: a.token });
+    expect(res.data.signedOut).toBe(1);
+    expect((await call('GET', '/api/me', { token: other })).status).toBe(401);
+    expect((await call('GET', '/api/me', { token: a.token })).status).toBe(200);
+  });
+
+  it('a member can delete their card and data with their PIN', async () => {
+    const cookie = await staff();
+    const a = await join();
+    expect((await call('DELETE', '/api/me', { token: a.token, body: {} })).status).toBe(401);
+    const res = await call('DELETE', '/api/me', { token: a.token, body: { currentPin: PIN } });
+    expect(res.status).toBe(200);
+    expect(res.headers.getSetCookie().join()).toContain('bk_card=;');
+    expect((await call('POST', '/api/admin/lookup', { cookie, body: { code: a.customer.code } })).status).toBe(404);
+  });
+});
+
+describe('staff sign-in hardening', () => {
+  it('parallel staff PIN guesses cannot get past the limit', async () => {
+    const results = await Promise.all(Array.from({ length: 25 }, (_, i) => call('POST', '/api/admin/login', { body: { pin: String(100000 + i) }, ip: '10.20.0.1' })));
+    expect(results.filter((r) => r.status === 401).length).toBeLessThanOrEqual(5);
+  });
+
+  it('"sign out all tills" ends other staff sessions and keeps this one', async () => {
+    const otherTill = await staff();
+    const thisTill = await staff();
+    const res = await call('POST', '/api/admin/logout-all', { cookie: thisTill });
+    const renewed = res.headers.get('set-cookie')!.split(';')[0]!;
+    expect((await call('GET', '/api/admin/snapshot', { cookie: renewed })).status).toBe(200);
+    expect((await call('GET', '/api/admin/snapshot', { cookie: otherTill })).status).toBe(401);
+  });
+
+  it('new team PINs need 6 to 8 digits', async () => {
+    const cookie = await staff();
+    expect((await call('PATCH', '/api/admin/settings', { cookie, body: { pin: '4829' } })).status).toBe(400);
+  });
+
+  it('the counter QR time limit cannot go below 30 minutes', async () => {
+    const cookie = await staff();
+    expect((await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 0 } })).status).toBe(400);
+    expect((await call('PATCH', '/api/admin/counter', { cookie, body: { cooldownMinutes: 60 } })).status).toBe(200);
+  });
+});
+
+describe('forgot PIN timing', () => {
+  it('pads every reply to the same minimum time', async () => {
+    const prev = process.env.FORGOT_MIN_MS;
+    process.env.FORGOT_MIN_MS = '400';
+    try {
+      const t0 = Date.now();
+      await handle(new Request('http://test/api/pin/forgot', { method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '10.30.0.1' }, body: JSON.stringify({ email: 'nobody@example.com' }) }));
+      expect(Date.now() - t0).toBeGreaterThanOrEqual(380);
+    } finally {
+      process.env.FORGOT_MIN_MS = prev;
+    }
   });
 });

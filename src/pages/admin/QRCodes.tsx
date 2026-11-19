@@ -22,10 +22,10 @@ function slug(s: string) {
 
 const escapeHtml = (v: string) => v.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
-function printPoster(c: Campaign) {
+function printPoster(c: Campaign, stickers: number) {
   const name = escapeHtml(c.name);
-  const headline = c.kind === 'join' ? 'Scan for your<br/><em>free 10th coffee</em>' : `Scan for<br/><em>${name}</em>`;
-  return printQrPoster(campaignQrUrl(c), c.name, headline, 'Collect a sticker with every coffee.<br/>Ten stickers and the next cup is on us.');
+  const headline = c.kind === 'join' ? 'Scan to start<br/><em>your loyalty card</em>' : `Scan for<br/><em>${name}</em>`;
+  return printQrPoster(campaignQrUrl(c), c.name, headline, `Collect a sticker with every coffee.<br/>Fill all ${stickers} and your next cup is on us.`);
 }
 
 /** Opens an A5 print-ready poster. `headline` and `footer` are trusted HTML; `title` is escaped. */
@@ -61,7 +61,7 @@ p{margin:0;font-size:13px;font-weight:500}
 }
 
 const COOLDOWNS: Array<[number, string]> = [
-  [0, 'No limit'],
+  [30, '30 minutes'],
   [60, '1 hour'],
   [120, '2 hours'],
   [180, '3 hours'],
@@ -72,7 +72,10 @@ const COOLDOWNS: Array<[number, string]> = [
 
 /** The one printed QR customers scan themselves to collect a sticker. */
 function CounterPanel() {
-  const { counter } = useAdminDB();
+  const {
+    counter,
+    settings: { stampsRequired },
+  } = useAdminDB();
   const toast = useToast();
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -144,7 +147,7 @@ function CounterPanel() {
           <button
             className="btn btn-primary"
             onClick={() =>
-              printQrPoster(url, 'Counter sticker QR', 'Scan to collect<br/><em>your sticker</em>', 'Point your phone camera at the code after you pay.<br/>Ten stickers and the next cup is on us.').then(
+              printQrPoster(url, 'Counter sticker QR', 'Scan to collect<br/><em>your sticker</em>', `Point your phone camera at the code after you pay.<br/>Fill all ${stampsRequired} and your next cup is on us.`).then(
                 (ok) => !ok && toast('Allow pop-ups to print', 'info'),
               )
             }
@@ -198,7 +201,10 @@ export function QRCodes() {
   const [creating, setCreating] = useState(false);
   const [preview, setPreview] = useState<Campaign | null>(null);
   const totalScans = db.campaigns.reduce((s, c) => s + c.scans, 0);
-  const featured = db.campaigns.find((c) => c.kind === 'join' && c.active) ?? db.campaigns[0];
+  // The sign-up poster only ever uses a live sign-up code (never a menu or paused code).
+  const featured = db.campaigns.find((c) => c.kind === 'join' && c.active);
+  const stickers = db.settings.stampsRequired;
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const download = async (c: Campaign) => {
     const png = await qrToPngDataUrl(campaignQrUrl(c), { title: c.name, subtitle: 'Bloeisel Koffie · scan to collect stickers' });
@@ -224,7 +230,7 @@ export function QRCodes() {
             <Icon name="sparkle" /> Branded codes
           </span>
           <h2 className="display">Put your card where people pause.</h2>
-          <p>Every code below opens the Bloeisel sign-up in one scan. Print them for the till, tables and window, then watch which spots bring people in.</p>
+          <p>Sign-up codes open the Bloeisel card in one scan; menu and link codes open their page. Print them for the till, tables and window, then watch which spots bring people in.</p>
           <div className="qrm-hero-stats">
             <div>
               <strong className="display tabular">{totalScans.toLocaleString('en-ZA')}</strong>
@@ -240,7 +246,7 @@ export function QRCodes() {
               <Icon name="plus" /> New QR code
             </button>
             {featured && (
-              <button className="btn qrm-ghost" onClick={() => printPoster(featured).then((ok) => !ok && toast('Allow pop-ups to print', 'info'))}>
+              <button className="btn qrm-ghost" onClick={() => printPoster(featured, stickers).then((ok) => !ok && toast('Allow pop-ups to print', 'info'))}>
                 <Icon name="printer" /> Print sign-up poster
               </button>
             )}
@@ -251,7 +257,7 @@ export function QRCodes() {
             <div className="qrm-poster-inner">
               <Logo tone="light" size="sm" />
               <p className="display">
-                Scan for your <em>free 10th coffee</em>
+                Scan to start <em>your loyalty card</em>
               </p>
               <div className="qrm-poster-qr">
                 <BrandQR value={campaignQrUrl(featured)} label={`QR code for ${featured.name}`} />
@@ -289,7 +295,7 @@ export function QRCodes() {
                 <button className="btn btn-sm btn-soft" onClick={() => download(c)}>
                   <Icon name="download" /> PNG
                 </button>
-                <button className="btn btn-sm btn-ghost" onClick={() => printPoster(c).then((ok) => !ok && toast('Allow pop-ups to print', 'info'))}>
+                <button className="btn btn-sm btn-ghost" onClick={() => printPoster(c, stickers).then((ok) => !ok && toast('Allow pop-ups to print', 'info'))}>
                   <Icon name="printer" /> Poster
                 </button>
                 <button className="icon-btn ghost" onClick={() => copy(c)} aria-label="Copy link">
@@ -327,22 +333,40 @@ export function QRCodes() {
               <button className="btn btn-primary" onClick={() => download(preview)}>
                 <Icon name="download" /> Download PNG
               </button>
-              <button
-                className="btn btn-danger"
-                onClick={() =>
-                  deleteCampaign(preview.id)
-                    .then(() => {
-                      setPreview(null);
-                      toast('QR code deleted', 'trash');
-                    })
-                    .catch((err: ApiError) => toast(err.message, 'info'))
-                }
-              >
+              <button className="btn btn-danger" onClick={() => setConfirmDelete(true)}>
                 <Icon name="trash" /> Delete
               </button>
             </div>
           </div>
         )}
+      </Sheet>
+
+      <Sheet open={confirmDelete && !!preview} onClose={() => setConfirmDelete(false)} title="Delete this QR code?">
+        <div className="confirm">
+          <p className="muted">
+            Printed copies of “{preview?.name}” will stop working and open the Bloeisel home page instead. Its {preview?.scans ?? 0} scans are deleted too.
+          </p>
+          <div className="confirm-actions">
+            <button className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+              Keep it
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={() =>
+                preview &&
+                deleteCampaign(preview.id)
+                  .then(() => {
+                    setConfirmDelete(false);
+                    setPreview(null);
+                    toast('QR code deleted', 'trash');
+                  })
+                  .catch((err: ApiError) => toast(err.message, 'info'))
+              }
+            >
+              Delete forever
+            </button>
+          </div>
+        </div>
       </Sheet>
     </div>
   );
