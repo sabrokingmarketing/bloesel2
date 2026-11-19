@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
 import { LoyaltyCard } from '../../components/LoyaltyCard';
-import { adminSignOutEverywhere, updateSettings, useAdminDB, type ApiError } from '../../data/store';
+import { adminSignOutEverywhere, downloadMembersCsv, updateSettings, useAdminDB, type ApiError } from '../../data/store';
 import type { Customer } from '../../data/types';
 
 export function SettingsPage() {
@@ -13,6 +13,7 @@ export function SettingsPage() {
   const [reward, setReward] = useState(db.settings.rewardName);
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const previewCustomer: Customer = {
     id: 'preview',
@@ -82,6 +83,29 @@ export function SettingsPage() {
       </form>
 
       <div className="settings-side">
+        <section className="card card-pad settings-security">
+          <h2 className="card-title">Back up members</h2>
+          <p className="faint settings-hint">
+            Download every member, their stickers and visits as a spreadsheet (CSV). Keep a copy somewhere safe every month. Emails stay hidden and PINs are never included.
+          </p>
+          <button
+            className="btn btn-ghost"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await downloadMembersCsv();
+                toast('Member list downloaded', 'download');
+              } catch (err) {
+                toast((err as ApiError).message, 'info');
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            <Icon name="download" /> {exporting ? 'Preparing…' : 'Export members (CSV)'}
+          </button>
+        </section>
         <section className="card card-pad settings-security">
           <h2 className="card-title">Staff sessions</h2>
           <p className="faint settings-hint">Lost a tablet, or someone left the team? Sign every other till out straight away. This till stays signed in.</p>

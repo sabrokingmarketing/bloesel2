@@ -59,6 +59,10 @@ The deployed app refuses to start without a real database, session secret and ad
 
 Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. Redeeming the free coffee still happens at the till.
 
+### Backups
+
+Settings → **Export members (CSV)** downloads every member with their stickers, rewards and visit dates (South African time). Emails stay masked and PINs are never included. Neon's free plan only keeps a short restore history, so download a copy every month and keep it somewhere safe.
+
 ### Limits worth knowing
 
 - The staff snapshot loads up to 5,000 members and 60 days of activity at once. That's plenty for one café; add pagination before it outgrows that.

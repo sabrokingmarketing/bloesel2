@@ -628,6 +628,44 @@ route('GET', '/api/admin/snapshot', async (ctx, db) => {
   });
 });
 
+/**
+ * The member list as a spreadsheet, so the owner can keep their own copy.
+ * Same data staff already see: emails stay masked and PINs are never included.
+ */
+route('GET', '/api/admin/export', async (ctx, db) => {
+  await requireStaff(ctx, db);
+  const rows = await db.query('SELECT * FROM customers ORDER BY joined_at');
+  const head = ['Code', 'Name', 'Mobile', 'Email (hidden)', 'Marketing opt-in', 'Stickers on card', 'Lifetime stickers', 'Rewards earned', 'Rewards redeemed', 'Usual order', 'Joined', 'Last visit'];
+  const lines = rows.map((r) => {
+    const c = toCustomer(r);
+    const k = String(r.phone_key);
+    const local = `0${k.slice(0, 2)} ${k.slice(2, 5)} ${k.slice(5)}`;
+    return [c.code, c.name, local, c.email ?? '', r.marketing_opt_in ? 'Yes' : 'No', c.stamps, c.totalStamps, c.rewardsEarned, c.rewardsRedeemed, c.favourite ?? '', saTime(c.joinedAt), saTime(c.lastVisit)];
+  });
+  const csv = '\ufeff' + [head, ...lines].map((l) => l.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  const day = new Date().toISOString().slice(0, 10);
+  return new Response(csv, {
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="bloeisel-members-${day}.csv"`,
+      'cache-control': 'no-store',
+    },
+  });
+});
+
+/** "2026-08-17 10:11" in South African time, for spreadsheets. */
+function saTime(v?: string) {
+  if (!v) return '';
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Africa/Johannesburg', dateStyle: 'short', timeStyle: 'short' }).format(new Date(v));
+}
+
+/** Quotes a CSV cell, and stops spreadsheet apps from running text that starts like a formula. */
+function csvCell(v: unknown) {
+  let s = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+
 route('POST', '/api/admin/lookup', async (ctx, db) => {
   await requireStaff(ctx, db);
   const { code } = await body(ctx, z.object({ code: z.string().max(200) }));

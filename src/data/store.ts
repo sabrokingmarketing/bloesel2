@@ -352,6 +352,22 @@ export function adminSignOutEverywhere() {
   return api('POST', '/api/admin/logout-all');
 }
 
+/** Downloads the member list as a CSV file. */
+export async function downloadMembersCsv() {
+  const res = await fetch('/api/admin/export', { credentials: 'same-origin' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, err?.error?.code ?? 'export_failed', err?.error?.message ?? 'Could not download the member list');
+  }
+  const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'bloeisel-members.csv';
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export async function adminSignOut() {
   await api('POST', '/api/admin/logout').catch(() => {});
   setAdmin({ auth: 'out', db: undefined });

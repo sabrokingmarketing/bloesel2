@@ -18,7 +18,8 @@ async function call(method: string, path: string, opts: Opts = {}) {
     new Request(`http://test${path}`, { method, headers, body: opts.body === undefined ? undefined : JSON.stringify(opts.body) }),
   );
   const text = await res.text();
-  return { status: res.status, headers: res.headers, data: text ? JSON.parse(text) : null };
+  const json = (res.headers.get('content-type') ?? '').includes('json');
+  return { status: res.status, headers: res.headers, text, data: text && json ? JSON.parse(text) : null };
 }
 
 /** The card session a response signed this phone in to (from its Set-Cookie), or undefined. */
@@ -558,6 +559,21 @@ describe('staff sign-in hardening', () => {
     const renewed = res.headers.get('set-cookie')!.split(';')[0]!;
     expect((await call('GET', '/api/admin/snapshot', { cookie: renewed })).status).toBe(200);
     expect((await call('GET', '/api/admin/snapshot', { cookie: otherTill })).status).toBe(401);
+  });
+
+  it('exports members as CSV for staff only, without PINs or full emails', async () => {
+    await join({ name: '=HYPERLINK("x") Lerato', email: 'lerato@example.com' });
+    expect((await call('GET', '/api/admin/export')).status).toBe(401);
+    const res = await call('GET', '/api/admin/export', { cookie: await staff() });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/csv');
+    expect(res.headers.get('content-disposition')).toMatch(/attachment; filename="bloeisel-members-\d{4}-\d{2}-\d{2}\.csv"/);
+    const text = res.text;
+    expect(text).toContain('"\'=HYPERLINK(""x"") Lerato"');
+    expect(text).toMatch(/"l•+@example\.com"/);
+    expect(text).not.toContain('lerato@example.com');
+    expect(text).not.toMatch(/scrypt|pin_hash|\$/);
+    expect(text.trim().split('\r\n')).toHaveLength(2);
   });
 
   it('new team PINs need 6 to 8 digits', async () => {
