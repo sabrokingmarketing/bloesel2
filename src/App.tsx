@@ -5,6 +5,7 @@ import { CustomerLayout } from './pages/customer/CustomerLayout';
 import { Join } from './pages/customer/Join';
 import { Claim } from './pages/customer/Claim';
 import { CounterStamp } from './pages/customer/CounterStamp';
+import { ResetPin } from './pages/customer/ResetPin';
 import { Home } from './pages/customer/Home';
 import { QRPage } from './pages/customer/QRPage';
 import { Rewards } from './pages/customer/Rewards';
@@ -21,6 +22,7 @@ export function App() {
       <Route path="/app/join" element={<Join />} />
       <Route path="/app/claim" element={<Claim />} />
       <Route path="/app/stamp" element={<CounterStamp />} />
+      <Route path="/app/reset" element={<ResetPin />} />
       <Route path="/app/qr" element={<QRPage />} />
       <Route path="/app" element={<CustomerLayout />}>
         <Route index element={<Home />} />

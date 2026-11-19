@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { SECURITY_HEADERS } from './server/headers';
 import react from '@vitejs/plugin-react';
 
 /** Serves the API from the dev and preview servers, mirroring the Vercel rewrites. */
@@ -19,5 +20,8 @@ function api(): Plugin {
 export default defineConfig({
   plugins: [react(), api()],
   server: { host: true, port: 5173 },
-  test: { include: ['tests/**/*.test.ts'], environment: 'node', testTimeout: 20000, fileParallelism: false },
+  // Same headers as production (vercel.json), so CSP problems show up locally.
+  preview: { headers: SECURITY_HEADERS },
+  // FORGOT_MIN_MS=0: tests don't wait out the forgot-PIN timing pad (covered by its own test).
+  test: { include: ['tests/**/*.test.ts'], environment: 'node', testTimeout: 20000, fileParallelism: false, env: { FORGOT_MIN_MS: '0' } },
 });

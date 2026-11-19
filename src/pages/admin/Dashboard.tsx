@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useToast } from '../../components/Feedback';
 import { Icon, type IconName } from '../../components/Icon';
 import { MiniSticker } from '../../components/Sticker';
 import { useAdminDB } from '../../data/store';
@@ -37,7 +36,6 @@ function KpiCard({ icon, label, value, delta, progress, caption, tone = 'rose' }
 
 export function Dashboard() {
   const db = useAdminDB();
-  const toast = useToast();
   const [range, setRange] = useState<'today' | '7d' | '30d'>('7d');
   const k = useMemo(() => kpis(db), [db]);
   const data = useMemo(() => series(db, range), [db, range]);
@@ -54,7 +52,7 @@ export function Dashboard() {
         <KpiCard icon="bean" label="Stickers today" value={k.today.value} delta={k.today.delta} progress={k.today.progress} caption={k.today.caption} />
         <KpiCard icon="users" label="Active members" value={k.active.value} delta={k.active.delta} progress={k.active.progress} caption={k.active.caption} tone="dark" />
         <KpiCard icon="gift" label="Free cups given" value={k.redeemed.value} delta={k.redeemed.delta} progress={k.redeemed.progress} caption={k.redeemed.caption} tone="caramel" />
-        <KpiCard icon="sparkle" label="New members" value={k.joined.value} delta={k.joined.delta} progress={k.joined.progress} caption={k.joined.caption} />
+        <KpiCard icon="userPlus" label="New members" value={k.joined.value} delta={k.joined.delta} progress={k.joined.progress} caption={k.joined.caption} />
       </section>
 
       <section className="dash-mid">
@@ -80,7 +78,15 @@ export function Dashboard() {
               ))}
             </div>
           </div>
-          <AreaChart data={data} />
+          {total === 0 ? (
+            <div className="chart-empty">
+              <Icon name="chart" />
+              <strong>No visits {range === 'today' ? 'yet today' : 'in this period yet'}</strong>
+              <span>Stickers and free coffees will show up here as they happen.</span>
+            </div>
+          ) : (
+            <AreaChart data={data} />
+          )}
         </article>
 
         <article className="card card-pad">
@@ -174,7 +180,7 @@ export function Dashboard() {
           <div className="card-head">
             <div>
               <h2 className="card-title">Almost blooming</h2>
-              <p className="faint chart-sub">Members one or two cups from a reward</p>
+              <p className="faint chart-sub">Free coffees waiting, and members one or two cups away</p>
             </div>
           </div>
           {close.length === 0 ? (
@@ -191,16 +197,14 @@ export function Dashboard() {
                     <span className="avatar">{initials(c.name)}</span>
                     <div>
                       <strong>{c.name}</strong>
-                      <span>{left <= 0 ? 'Reward ready to redeem' : `${left} to go · last seen ${timeAgo(c.lastVisit).toLowerCase()}`}</span>
+                      <span>{left <= 0 ? 'Free coffee ready' : `Last seen ${timeAgo(c.lastVisit).toLowerCase()}`}</span>
                     </div>
                     {left <= 0 ? (
                       <Link to={`/admin/scan?code=${c.code}`} className="btn btn-sm btn-dark">
                         Redeem
                       </Link>
                     ) : (
-                      <button className="btn btn-sm btn-soft" onClick={() => toast(`Reminder queued for ${c.name.split(' ')[0]}`, 'heart')}>
-                        Nudge
-                      </button>
+                      <span className="chip chip-neutral tabular">{left} to go</span>
                     )}
                   </li>
                 );

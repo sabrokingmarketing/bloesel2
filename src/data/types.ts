@@ -1,5 +1,7 @@
 export type Customer = {
   id: string;
+  /** Whether the member has chosen a sign-in PIN. */
+  hasPin?: boolean;
   /** Short member code encoded in the customer's QR, e.g. "BK-7F3K29". */
   code: string;
   name: string;

@@ -77,7 +77,7 @@ export function Rewards() {
             <div className="reward-progress-copy">
               <h2 className="card-title">{settings.rewardName}</h2>
               <p className="muted">
-                You have {have} of {max} stickers. Keep collecting and your {max}th coffee is free.
+                You have {have} of {max} stickers. Fill your card and your next coffee is on us.
               </p>
               <p className="reward-scan-tip">
                 <Icon name="camera" /> Scan the QR code by the till after you pay.

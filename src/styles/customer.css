@@ -1506,6 +1506,7 @@
 }
 .claim {
   min-height: 100dvh;
+  background: #fff;
   display: grid;
   place-content: center;
   justify-items: center;
@@ -1601,7 +1602,7 @@
   justify-items: center;
   gap: var(--s-6);
   padding: calc(var(--s-6) + var(--safe-top)) var(--s-5) var(--s-8);
-  background: radial-gradient(120% 60% at 50% 0%, var(--blush-100), var(--bg) 70%);
+  background: #fff;
 }
 .counter-card {
   width: min(400px, 100%);
@@ -1634,4 +1635,87 @@
 .reward-scan-tip svg {
   width: 18px;
   height: 18px;
+}
+
+/* =========================================================
+   PIN sign-in and recovery
+   ========================================================= */
+.pin-input {
+  position: relative;
+}
+.pin-input .input {
+  padding-right: 52px;
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
+.pin-input .input::placeholder {
+  letter-spacing: 0.3em;
+}
+.pin-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink-faint);
+}
+.pin-toggle:hover {
+  color: var(--ink);
+  background: var(--blush-25);
+}
+.pin-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+.join-forgot {
+  justify-self: center;
+  font-size: var(--fs-14);
+}
+.join-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+}
+.join-sent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--success-soft);
+  color: #2f5d3e;
+  font-size: var(--fs-14);
+  line-height: 1.5;
+}
+.join-sent .group-icon {
+  background: var(--success);
+}
+.group-icon.is-dark {
+  background: var(--espresso-900);
+}
+.settings-badge {
+  flex: none !important;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--rose-500);
+  color: #fff;
+  font-size: var(--fs-11);
+  font-weight: 600;
+}
+.pin-sheet,
+.reset-form {
+  display: grid;
+  gap: var(--s-4);
+  width: 100%;
+  text-align: left;
+}
+.reset-card {
+  width: min(420px, 100%);
 }

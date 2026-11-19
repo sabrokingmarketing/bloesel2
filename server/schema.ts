@@ -99,7 +99,30 @@ const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
       ALTER TABLE settings ADD COLUMN self_scan_cooldown_minutes integer NOT NULL DEFAULT 180
         CHECK (self_scan_cooldown_minutes BETWEEN 0 AND 1440)
     `,
-  }
+  },
+  {
+    id: 3,
+    name: 'customer_pin_and_recovery',
+    sql: `
+      ALTER TABLE customers ADD COLUMN pin_hash text;
+      CREATE INDEX customers_email_lower ON customers (lower(email));
+      CREATE TABLE pin_resets (
+        token_hash text PRIMARY KEY,
+        customer_id uuid NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        expires_at timestamptz NOT NULL,
+        used_at timestamptz
+      );
+      CREATE INDEX pin_resets_customer ON pin_resets (customer_id)
+    `,
+  },
+  {
+    id: 4,
+    name: 'staff_session_epoch_and_counter_floor',
+    sql: `
+      ALTER TABLE settings ADD COLUMN staff_session_epoch integer NOT NULL DEFAULT 0;
+      UPDATE settings SET self_scan_cooldown_minutes = 60 WHERE self_scan_cooldown_minutes < 30
+    `,
+  },
 ];
 
 let ready: Promise<void> | null = null;

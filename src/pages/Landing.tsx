@@ -3,9 +3,11 @@ import { CoffeeBreak } from '../components/CoffeeBreak';
 import { Icon } from '../components/Icon';
 import { Logo } from '../components/Logo';
 import { Sticker } from '../components/Sticker';
+import { useConfig } from '../data/store';
 
 /** Customer-facing landing page: one action, open my card. Staff get a quiet link top right. */
 export function Landing() {
+  const n = useConfig()?.stampsRequired ?? 10;
   return (
     <div className="landing-page">
       <main className="landing">
@@ -22,7 +24,7 @@ export function Landing() {
               Every cup <span className="landing-accent">blooms</span> into a free one.
             </h1>
             <p className="landing-lede">
-              Collect a sticker with every coffee. Fill your card with ten, and your next cup is on us. No paper, no app store, just your phone.
+              Collect a sticker with every coffee. Fill your card with {n}, and your next cup is on us. No paper, no app store, just your phone.
             </p>
             <div className="landing-actions">
               <Link to="/app" className="btn btn-primary btn-lg btn-cta">
@@ -38,7 +40,7 @@ export function Landing() {
                   <Sticker index={i} filled isReward={i === 4} />
                 </div>
               ))}
-              <span className="landing-stickers-note">10 stickers = 1 free coffee</span>
+              <span className="landing-stickers-note">{n} stickers = 1 free coffee</span>
             </div>
           </div>
           <div className="landing-art rise rise-2">

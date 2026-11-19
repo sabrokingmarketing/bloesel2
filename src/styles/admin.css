@@ -200,14 +200,20 @@
   align-items: center;
   gap: var(--s-3);
 }
-.ad-bell-dot {
+.ad-bell-count {
   position: absolute;
-  top: 9px;
-  right: 10px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
   background: var(--rose-500);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
   box-shadow: 0 0 0 2px var(--paper);
 }
 .ad-user {
@@ -618,15 +624,19 @@
 }
 .ac-y,
 .ac-x {
+  position: absolute;
   font-size: 12px;
-  fill: var(--ink-faint);
-  font-family: var(--font-ui);
+  line-height: 1;
+  color: var(--ink-faint);
+  pointer-events: none;
+  white-space: nowrap;
 }
 .ac-y {
-  text-anchor: end;
+  transform: translateY(-50%);
 }
 .ac-x {
-  text-anchor: middle;
+  bottom: 0;
+  transform: translateX(-50%);
 }
 .ac-line {
   fill: none;
@@ -2006,5 +2016,105 @@
   }
   .counter-panel-body {
     padding: var(--s-6) var(--s-8);
+  }
+}
+
+.chart-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  height: 260px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.chart-empty svg {
+  width: 32px;
+  height: 32px;
+  color: var(--rose-400);
+  margin-bottom: 4px;
+}
+.chart-empty strong {
+  color: var(--ink);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.chart-empty span {
+  font-size: var(--fs-13);
+}
+.vf-idle strong {
+  text-transform: capitalize;
+}
+@media (min-width: 1100px) {
+  .chart-empty {
+    height: 300px;
+  }
+}
+
+
+/* ---------- Launch review fixes ---------- */
+/* Recent activity: stacked rows on phones; on desktop the member name gives way, not the dates. */
+.recent-card .t-member > span:last-child {
+  min-width: 0;
+}
+.recent-card .t-member strong {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-card .t-when {
+  white-space: nowrap;
+}
+@media (max-width: 639px) {
+  .recent-card .table thead {
+    display: none;
+  }
+  .recent-card .table,
+  .recent-card .table tbody {
+    display: block;
+  }
+  .recent-card .table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'member when' 'activity activity';
+    gap: 8px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .recent-card .table tr:last-child {
+    border-bottom: 0;
+  }
+  .recent-card .table td {
+    padding: 0;
+    border: 0;
+  }
+  .recent-card .table td:nth-child(1) {
+    grid-area: member;
+  }
+  .recent-card .table td:nth-child(2) {
+    grid-area: activity;
+    padding-left: 52px;
+  }
+  .recent-card .table td.t-when {
+    grid-area: when;
+    align-self: center;
+  }
+}
+
+/* The floating Scan button only appears where there's no sidebar, and never covers the last row. */
+@media (max-width: 1023px) {
+  .ad-main {
+    padding-bottom: calc(96px + var(--safe-bottom));
+  }
+}
+
+/* Tablet: scanner and result side by side, so the result is visible straight after a scan. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .scan {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .viewfinder {
+    aspect-ratio: 1;
   }
 }

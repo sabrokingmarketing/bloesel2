@@ -19,4 +19,5 @@ async function entry(request: Request) {
 export const GET = entry;
 export const POST = entry;
 export const PATCH = entry;
+export const PUT = entry;
 export const DELETE = entry;

@@ -62,9 +62,9 @@ export function getCookie(req: Request, name: string) {
   return undefined;
 }
 
-export function cookie(name: string, value: string, maxAge: number) {
+export function cookie(name: string, value: string, maxAge: number, sameSite: 'Strict' | 'Lax' = 'Strict') {
   const secure = isDeployed();
-  return [`${name}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${maxAge}`, secure ? 'Secure' : '']
+  return [`${name}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', `SameSite=${sameSite}`, `Max-Age=${maxAge}`, secure ? 'Secure' : '']
     .filter(Boolean)
     .join('; ');
 }

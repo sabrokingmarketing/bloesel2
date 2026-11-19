@@ -212,9 +212,9 @@ function CustomerSheet({ customer, onClose }: { customer?: Customer; onClose: ()
             <Icon name="phone" /> {customer.phone}
           </a>
           {customer.email && (
-            <a href={`mailto:${customer.email}`} className="chip chip-neutral">
+            <span className="chip chip-neutral" title="Email addresses are hidden from staff">
               <Icon name="mail" /> {customer.email}
-            </a>
+            </span>
           )}
         </div>
 

@@ -17,7 +17,8 @@ Locally there's nothing to install: the API uses [PGlite](https://pglite.dev), a
 | Route | What it is |
 | --- | --- |
 | `/` | Landing page |
-| `/app/join` | Create a card, or learn how to move an existing one |
+| `/app/join` | Create a card (with a 4-digit PIN), or sign in with mobile number + PIN |
+| `/app/reset#…` | Opened from the PIN reset email: choose a new PIN |
 | `/app` | Customer card, rewards, visit history, profile |
 | `/app/qr` | Full-screen pink QR for the barista; updates live |
 | `/app/claim#…` | One-time link that moves a card onto this phone |
@@ -30,6 +31,7 @@ Locally there's nothing to install: the API uses [PGlite](https://pglite.dev), a
 1. Import the repo at vercel.com/new. Vercel detects Vite; keep the defaults.
 2. **Storage → Marketplace → Neon (Postgres)** and connect it to the project. This sets `DATABASE_URL`.
 3. **Settings → Environment Variables:** add `SESSION_SECRET` (run `openssl rand -base64 48`) and `ADMIN_PIN` (4 to 8 digits; 6+ recommended).
+   For "Forgot your PIN?" emails, also add `RESEND_API_KEY` (from resend.com, with your domain verified there) and `EMAIL_FROM` (e.g. `Bloeisel <cards@bloeiselkoffie.co.za>`). Without them, the app tells customers to ask their barista instead.
 4. Redeploy. Tables are created automatically on the first request.
 5. Optional: run `DATABASE_URL=<your Neon URL> npm run db:seed` once to load the sample data.
 
@@ -44,7 +46,11 @@ The deployed app refuses to start without a real database, session secret and ad
 
 ### Security model
 
-- **Customers** don't have passwords. Joining issues a random device token (only its SHA-256 is stored), so a card lives on the phone that created it. A phone number alone can never open someone's card.
+- **Customers** choose a 4-digit PIN (scrypt-hashed; trivial PINs refused) and sign in with mobile number + PIN. Five wrong PINs lock that number for 15 minutes, and a wrong number gets the same reply as a wrong PIN.
+- **Staying signed in:** each phone gets a random device token (only its SHA-256 is stored) in an HttpOnly, SameSite=Lax cookie that lasts 120 days after the last visit. Page scripts can't read it.
+- **Forgot PIN:** a single-use reset link valid for 30 minutes is emailed to the address on the card. The reply never says whether an address is on a card, the link is built from configuration (not the request's Host header), and completing a reset signs out every other phone.
+- **Personal data:** staff screens only ever receive masked email addresses; PIN and token hashes are never sent to any browser; emails, PINs and links are never logged.
+- **Headers:** a strict Content-Security-Policy, HSTS and frame blocking are set in `vercel.json` (`server/headers.ts`).
 - **Moving a card** uses a one-time link that expires after 15 minutes. The member makes one in **Profile → Move to a new phone**, or a barista makes one at the till (**Customers → Send card to a new phone**). Using the link signs every other phone out, so a lost phone stops working.
 - **Staff** sign in with the shop PIN (scrypt-hashed) and get a signed, HttpOnly, SameSite=Strict cookie for 12 hours. Five wrong PINs from one network locks it for 15 minutes. Changing the PIN signs out every other till.
 - **Till actions** carry an idempotency key, and the card row is locked while it changes. A double tap or a retried request on a bad connection can't add two stickers, and two tills can't race.
@@ -52,6 +58,10 @@ The deployed app refuses to start without a real database, session secret and ad
 ### Counter sticker QR
 
 Customers can collect a sticker themselves by scanning one printed QR at the till (Admin → QR Codes → Counter Sticker QR). It carries a random code, and each card can collect at most one counter sticker per visit window (3 hours by default, set on the same panel). A photo of the poster therefore can't be farmed from home for more than one sticker per window. If the code leaks, **Replace Code** makes every old print stop working. Counter stickers are marked "Counter QR" in the history. Redeeming the free coffee still happens at the till.
+
+### Backups
+
+Settings → **Export members (CSV)** downloads every member with their stickers, rewards and visit dates (South African time). Emails stay masked and PINs are never included. Neon's free plan only keeps a short restore history, so download a copy every month and keep it somewhere safe.
 
 ### Limits worth knowing
 

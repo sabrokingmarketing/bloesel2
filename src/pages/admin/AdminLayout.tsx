@@ -6,7 +6,7 @@ import { adminSignOut, useAdmin, useAdminDB } from '../../data/store';
 import { initials } from '../../lib/format';
 
 const NAV: Array<{ to: string; label: string; icon: IconName; end?: boolean }> = [
-  { to: '/admin', label: 'Dashboard', icon: 'home', end: true },
+  { to: '/admin', label: 'Dashboard', icon: 'dashboard', end: true },
   { to: '/admin/scan', label: 'Scan & stamp', icon: 'scan' },
   { to: '/admin/customers', label: 'Customers', icon: 'users' },
   { to: '/admin/qr-codes', label: 'QR codes', icon: 'qr' },
@@ -112,11 +112,11 @@ export function AdminLayout() {
           </form>
           <div className="ad-top-right">
             <Link to="/admin/customers?filter=ready" className="icon-btn" aria-label={`${readyCount} rewards ready`}>
-              <Icon name="bell" />
-              {readyCount > 0 && <span className="ad-bell-dot" />}
+              <Icon name="gift" />
+              {readyCount > 0 && <span className="ad-bell-count tabular">{readyCount}</span>}
             </Link>
             <div className="ad-user">
-              <span className="avatar">{initials('Bloeisel Barista')}</span>
+              <span className="avatar">{initials(db.settings.storeName)}</span>
               <div>
                 <span className="ad-user-role">On shift</span>
                 <strong>{db.settings.storeName}</strong>

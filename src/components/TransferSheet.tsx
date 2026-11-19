@@ -18,7 +18,8 @@ export function TransferSheet({ transfer, onClose, who }: { transfer: Transfer |
 
   if (!transfer) return null;
   const url = claimUrl(transfer.token);
-  const left = Math.max(0, Math.round((new Date(transfer.expiresAt).getTime() - now) / 1000));
+  // Clamped to the link's 15-minute lifetime, in case this device's clock runs behind the server's.
+  const left = Math.min(15 * 60, Math.max(0, Math.round((new Date(transfer.expiresAt).getTime() - now) / 1000)));
   const expired = left === 0;
 
   return (

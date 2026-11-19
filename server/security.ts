@@ -1,7 +1,7 @@
 import { isDeployed, SetupError } from './env.js';
 import { createHash, createHmac, randomBytes, randomInt, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import type { Queryable } from './db.js';
+import type { Db, Queryable } from './db.js';
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
@@ -44,6 +44,30 @@ export function safeEqual(a: string, b: string) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
+/* ---------- Customer card session ---------- */
+
+/** HttpOnly cookie holding the phone's device token. */
+export const CARD_COOKIE = 'bk_card';
+/** Members stay signed in this long after their last visit (sliding). */
+export const CARD_SESSION_DAYS = 120;
+
+/** Rejects PINs that are trivially guessed: all one digit, or a straight run like 1234 or 9876. */
+export function weakPin(pin: string) {
+  if (/^(\d)\1+$/.test(pin)) return true;
+  const d = pin.split('').map(Number);
+  const up = d.every((x, i) => i === 0 || x === (d[i - 1]! + 1) % 10);
+  const down = d.every((x, i) => i === 0 || x === (d[i - 1]! + 9) % 10);
+  return up || down;
+}
+
+/** "lerato@example.com" -> "l•••••@example.com". Staff screens never get full addresses. */
+export function maskEmail(email: string | null | undefined) {
+  if (!email) return undefined;
+  const at = email.indexOf('@');
+  if (at < 1) return '•••';
+  return `${email[0]}${'•'.repeat(Math.max(3, Math.min(8, at - 1)))}${email.slice(at)}`;
+}
+
 /* ---------- Staff session cookie ---------- */
 
 export const STAFF_COOKIE = 'bk_staff';
@@ -62,14 +86,17 @@ function sign(payload: string) {
   return createHmac('sha256', sessionSecret()).update(payload).digest('base64url');
 }
 
-/** Session = expiry + PIN-version, signed. Changing the PIN logs every till out. */
-export function issueStaffSession(pinHash: string, now = Date.now()) {
+/**
+ * Session = expiry + version, signed. The version covers the PIN hash and a
+ * session epoch, so changing the PIN or "sign out all tills" ends every session.
+ */
+export function issueStaffSession(pinHash: string, epoch = 0, now = Date.now()) {
   const exp = now + STAFF_SESSION_HOURS * 3600_000;
-  const payload = `${exp}.${pinVersion(pinHash)}`;
+  const payload = `${exp}.${pinVersion(pinHash, epoch)}`;
   return { value: `${payload}.${sign(payload)}`, maxAge: STAFF_SESSION_HOURS * 3600 };
 }
 
-export function verifyStaffSession(value: string | undefined, pinHash: string, now = Date.now()) {
+export function verifyStaffSession(value: string | undefined, pinHash: string, epoch = 0, now = Date.now()) {
   if (!value) return false;
   const i = value.lastIndexOf('.');
   if (i < 0) return false;
@@ -78,26 +105,41 @@ export function verifyStaffSession(value: string | undefined, pinHash: string, n
   const want = Buffer.from(sign(payload));
   if (sig.length !== want.length || !timingSafeEqual(sig, want)) return false;
   const [exp, ver] = payload.split('.');
-  return Number(exp) > now && ver === pinVersion(pinHash);
+  return Number(exp) > now && ver === pinVersion(pinHash, epoch);
 }
 
-function pinVersion(pinHash: string) {
-  return createHash('sha256').update(pinHash).digest('base64url').slice(0, 10);
+function pinVersion(pinHash: string, epoch: number) {
+  return createHash('sha256').update(`${pinHash}:${epoch}`).digest('base64url').slice(0, 10);
 }
 
 /* ---------- Rate limiting (DB-backed, works across serverless instances) ---------- */
 
-/** Records one event and reports whether the bucket is over `limit` within `windowSec`. */
-export async function hitRateLimit(q: Queryable, bucket: string, limit: number, windowSec: number) {
-  const rows = await q.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM rate_events WHERE bucket = $1 AND at > now() - make_interval(secs => $2)`,
-    [bucket, windowSec],
-  );
-  if ((rows[0]?.n ?? 0) >= limit) return true;
-  await q.query('INSERT INTO rate_events (bucket) VALUES ($1)', [bucket]);
+/**
+ * Atomically records one attempt in `bucket` unless it already holds `limit`
+ * within `windowSec`; returns false when the attempt is refused. A per-bucket
+ * advisory lock makes count-and-insert one step, so parallel requests can't
+ * all slip in before any is counted. Call it BEFORE checking a PIN.
+ */
+export async function takeAttempt(q: Db | Queryable, bucket: string, limit: number, windowSec: number) {
+  const run = async (t: Queryable) => {
+    await t.query('SELECT pg_advisory_xact_lock(hashtext($1))', [bucket]);
+    const [row] = await t.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM rate_events WHERE bucket = $1 AND at > now() - make_interval(secs => $2)`,
+      [bucket, windowSec],
+    );
+    if ((row?.n ?? 0) >= limit) return false;
+    await t.query('INSERT INTO rate_events (bucket) VALUES ($1)', [bucket]);
+    return true;
+  };
+  const allowed = 'tx' in q ? await (q as Db).tx(run) : await run(q);
   // Opportunistic cleanup keeps the table small without a cron job.
-  if (Math.random() < 0.02) await q.query(`DELETE FROM rate_events WHERE at < now() - interval '1 day'`);
-  return false;
+  if (Math.random() < 0.02) await q.query(`DELETE FROM rate_events WHERE at < now() - interval '2 days'`);
+  return allowed;
+}
+
+/** True when the bucket is over its limit (and records the attempt otherwise). */
+export async function hitRateLimit(q: Db | Queryable, bucket: string, limit: number, windowSec: number) {
+  return !(await takeAttempt(q, bucket, limit, windowSec));
 }
 
 export async function clearRateLimit(q: Queryable, bucket: string) {

@@ -46,7 +46,8 @@ export function AreaChart({ data, height = 260, unit = 'stickers' }: { data: Poi
     return { max, ticks, pts, line, area, peak };
   }, [data, innerH, innerW, pad.l, pad.t]);
 
-  const labelEvery = Math.ceil(data.length / 7);
+  const narrow = typeof window !== 'undefined' && window.innerWidth < 640;
+  const labelEvery = Math.ceil(data.length / (narrow ? 4 : 7));
   const active = hover ?? peak;
   const ap = pts[active];
 
@@ -73,25 +74,26 @@ export function AreaChart({ data, height = 260, unit = 'stickers' }: { data: Poi
         {ticks.map((t) => {
           const y = pad.t + innerH - (t / max) * innerH;
           return (
-            <g key={t}>
-              <line x1={pad.l} x2={W - pad.r} y1={y} y2={y} className="ac-grid" />
-              <text x={pad.l - 10} y={y + 4} className="ac-y">
-                {t}
-              </text>
-            </g>
+            <line key={t} x1={pad.l} x2={W - pad.r} y1={y} y2={y} className="ac-grid" />
           );
         })}
         <path d={area} fill={`url(#${id}-fill)`} />
         <path d={line} className="ac-line" filter={`url(#${id}-glow)`} vectorEffect="non-scaling-stroke" />
-        {data.map((d, i) =>
-          i % labelEvery === 0 || i === data.length - 1 ? (
-            <text key={i} x={pts[i].x} y={H - 8} className="ac-x">
-              {d.label}
-            </text>
-          ) : null,
-        )}
         {ap && <line x1={ap.x} x2={ap.x} y1={ap.y} y2={pad.t + innerH} className="ac-cursor" />}
       </svg>
+      {/* Axis labels are HTML (not SVG text) so the stretched chart never squashes them. */}
+      {ticks.map((t) => (
+        <span key={t} className="ac-y" style={{ top: `${((pad.t + innerH - (t / max) * innerH) / H) * 100}%`, right: `${100 - ((pad.l - 10) / W) * 100}%` }}>
+          {t}
+        </span>
+      ))}
+      {data.map((d, i) =>
+        i % labelEvery === 0 || i === data.length - 1 ? (
+          <span key={i} className="ac-x" style={{ left: `${(pts[i]!.x / W) * 100}%` }}>
+            {d.label}
+          </span>
+        ) : null,
+      )}
       {ap && (
         <>
           <span className="ac-dot" style={{ left: `${(ap.x / W) * 100}%`, top: `${(ap.y / H) * 100}%` }} />
