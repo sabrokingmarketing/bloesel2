@@ -123,6 +123,11 @@ const MIGRATIONS: Array<{ id: number; name: string; sql: string }> = [
       UPDATE settings SET self_scan_cooldown_minutes = 60 WHERE self_scan_cooldown_minutes < 30
     `,
   },
+  {
+    id: 5,
+    name: 'reward_name_free_coffee',
+    sql: `UPDATE settings SET reward_name = 'A free coffee on us' WHERE reward_name = 'Any coffee, on us'`,
+  },
 ];
 
 let ready: Promise<void> | null = null;
@@ -161,7 +166,7 @@ async function migrate(db: Db) {
       if (!pin && isProd) throw new SetupError('ADMIN_PIN is not set. In Vercel, add it under Settings → Environment Variables (4 to 8 digits), then redeploy.');
       await q.query(
         `INSERT INTO settings (id, store_name, stamps_required, reward_name, admin_pin_hash)
-         VALUES (1, 'Bloeisel Koffie', 10, 'Any coffee, on us', $1)`,
+         VALUES (1, 'Bloeisel Koffie', 10, 'A free coffee on us', $1)`,
         [await hashPin(pin ?? '1234')],
       );
     }

@@ -455,6 +455,25 @@ route('POST', '/api/me/counter-stamp', async (ctx, db) => {
   return json({ ...res, completed: res.customer.stamps >= Number(s.stamps_required) });
 });
 
+/**
+ * The member marks their own free coffee as redeemed at the counter (the
+ * barista can also do it from Customers). The card starts again; history stays.
+ */
+route('POST', '/api/me/redeem', async (ctx, db) => {
+  const { customer } = await requireCustomer(ctx, db);
+  const input = await body(ctx, z.object({ idempotencyKey }));
+  const s = await loadSettings(db);
+  const res = await mutateCard(db, String(customer.id), input.idempotencyKey, (c, max) => {
+    const stamps = Number(c.stamps);
+    if (stamps < max) return conflict('Your card has no free coffee to redeem yet.', 'not_ready');
+    return {
+      set: { stamps: stamps - max, rewards_redeemed: Number(c.rewards_redeemed) + 1 },
+      activity: { type: 'redeem', drink: s.reward_name, note: 'Redeemed by member' },
+    };
+  });
+  return json(res);
+});
+
 route('POST', '/api/claim', async (ctx, db) => {
   const input = await body(ctx, z.object({ token: z.string().min(20).max(100) }));
   if (await hitRateLimit(db, `claim:${ctx.ip}`, 20, 3600)) throw tooMany('Too many attempts. Try again later.');

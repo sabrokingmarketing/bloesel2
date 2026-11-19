@@ -38,7 +38,7 @@ export function Home() {
             </span>
             <span className="group-text">
               <strong>Claim your free coffee</strong>
-              <span>Show your Rewards screen to the barista.</span>
+              <span>Open Rewards at the counter and tap Redeemed.</span>
             </span>
             <Icon name="chevronRight" className="group-chev" />
           </Link>
