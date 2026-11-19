@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Sheet, useToast } from '../../components/Feedback';
 import { Icon } from '../../components/Icon';
@@ -9,6 +9,8 @@ import type { Customer } from '../../data/types';
 import { isLapsed } from '../../lib/analytics';
 import { dateTime, initials, shortDate, timeAgo } from '../../lib/format';
 import { StampDots } from './StampDots';
+
+const PAGE = 10;
 
 type Filter = 'all' | 'ready' | 'close' | 'new' | 'lapsed';
 type Sort = 'recent' | 'stamps' | 'name' | 'lifetime';
@@ -70,6 +72,11 @@ export function Customers() {
     return list.sort(by[sort]);
   }, [db.customers, q, filter, sort, max]);
 
+  // 10 members at a time; start again from the top when the search, filter or sort changes.
+  const [shown, setShown] = useState(PAGE);
+  useEffect(() => setShown(PAGE), [q, filter, sort]);
+  const visible = rows.slice(0, shown);
+
   const open = openId ? db.customers.find((c) => c.id === openId) : undefined;
 
   return (
@@ -123,7 +130,7 @@ export function Customers() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((c) => (
+                {visible.map((c) => (
                   <tr key={c.id} onClick={() => set('open', c.id)} className="t-click">
                     <td>
                       <div className="t-member">
@@ -155,7 +162,7 @@ export function Customers() {
             </table>
 
             <ul className="customer-cards">
-              {rows.map((c) => (
+              {visible.map((c) => (
                 <li key={c.id}>
                   <button onClick={() => set('open', c.id)}>
                     <span className="avatar">{initials(c.name)}</span>
@@ -171,6 +178,17 @@ export function Customers() {
                 </li>
               ))}
             </ul>
+
+            {rows.length > shown && (
+              <div className="customers-more">
+                <button className="btn btn-ghost btn-block load-more" onClick={() => setShown((n) => n + PAGE)}>
+                  <Icon name="chevronDown" /> Load more
+                  <span className="faint tabular no-caps">
+                    {shown} of {rows.length}
+                  </span>
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

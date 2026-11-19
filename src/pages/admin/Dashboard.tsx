@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon, type IconName } from '../../components/Icon';
-import { MiniSticker } from '../../components/Sticker';
 import { useAdminDB } from '../../data/store';
-import { closeToReward, kpis, series, topDrinks } from '../../lib/analytics';
+import { closeToReward, kpis, series } from '../../lib/analytics';
 import { initials, pct, timeAgo } from '../../lib/format';
 import { AreaChart } from './AreaChart';
 import { StampDots } from './StampDots';
 
-function KpiCard({ icon, label, value, delta, progress, caption, tone = 'rose' }: { icon: IconName; label: string; value: string | number; delta: number; progress: number; caption: string; tone?: 'rose' | 'dark' | 'caramel' }) {
+function KpiCard({ icon, label, value, delta, caption, tone = 'rose' }: { icon: IconName; label: string; value: string | number; delta: number; caption: string; tone?: 'rose' | 'dark' | 'caramel' }) {
   const up = delta >= 0;
   return (
     <article className="kpi card">
@@ -16,46 +15,42 @@ function KpiCard({ icon, label, value, delta, progress, caption, tone = 'rose' }
         <span className={`kpi-icon ${tone}`}>
           <Icon name={icon} />
         </span>
-        <div className="kpi-label">
-          <span>{label}</span>
-          <em className={up ? 'up' : 'down'}>{pct(delta)}</em>
-        </div>
+        <span className="kpi-label">{label}</span>
       </div>
-      <div className="kpi-value">
-        <strong className="tabular">{value}</strong>
-        <div className="kpi-bar">
-          <div className="progress">
-            <span style={{ width: `${Math.max(4, progress * 100)}%` }} />
-          </div>
-          <small>{caption}</small>
-        </div>
+      <strong className="kpi-num tabular">{value}</strong>
+      <div className="kpi-foot">
+        <em className={`kpi-delta ${up ? 'up' : 'down'}`}>{pct(delta)}</em>
+        <small className="kpi-caption">{caption}</small>
       </div>
     </article>
   );
 }
+
+const FIRST_PAGE = 5;
+const PAGE = 10;
 
 export function Dashboard() {
   const db = useAdminDB();
   const [range, setRange] = useState<'today' | '7d' | '30d'>('7d');
   const k = useMemo(() => kpis(db), [db]);
   const data = useMemo(() => series(db, range), [db, range]);
-  const drinks = useMemo(() => topDrinks(db).slice(0, 5), [db]);
   const close = useMemo(() => closeToReward(db.customers, db.settings.stampsRequired).slice(0, 5), [db]);
   const byId = useMemo(() => new Map(db.customers.map((c) => [c.id, c])), [db.customers]);
-  const recent = db.activity.filter((a) => a.type !== 'join').slice(0, 7);
+  const [shown, setShown] = useState(FIRST_PAGE);
+  const allRecent = useMemo(() => db.activity.filter((a) => a.type !== 'join' && byId.has(a.customerId)), [db.activity, byId]);
+  const recent = allRecent.slice(0, shown);
   const total = data.reduce((s, d) => s + d.value, 0);
-  const maxDrink = drinks[0]?.count ?? 1;
 
   return (
     <div className="dash">
       <section className="kpi-row">
-        <KpiCard icon="bean" label="Stickers today" value={k.today.value} delta={k.today.delta} progress={k.today.progress} caption={k.today.caption} />
-        <KpiCard icon="users" label="Active members" value={k.active.value} delta={k.active.delta} progress={k.active.progress} caption={k.active.caption} tone="dark" />
-        <KpiCard icon="gift" label="Free cups given" value={k.redeemed.value} delta={k.redeemed.delta} progress={k.redeemed.progress} caption={k.redeemed.caption} tone="caramel" />
-        <KpiCard icon="userPlus" label="New members" value={k.joined.value} delta={k.joined.delta} progress={k.joined.progress} caption={k.joined.caption} />
+        <KpiCard icon="bean" label="Stickers today" value={k.today.value} delta={k.today.delta} caption={k.today.caption} />
+        <KpiCard icon="users" label="Active members" value={k.active.value} delta={k.active.delta} caption={k.active.caption} tone="dark" />
+        <KpiCard icon="gift" label="Free cups given" value={k.redeemed.value} delta={k.redeemed.delta} caption={k.redeemed.caption} tone="caramel" />
+        <KpiCard icon="userPlus" label="New members" value={k.joined.value} delta={k.joined.delta} caption={k.joined.caption} />
       </section>
 
-      <section className="dash-mid">
+      <section className="dash-chart">
         <article className="card card-pad chart-card">
           <div className="card-head">
             <div>
@@ -89,28 +84,6 @@ export function Dashboard() {
           )}
         </article>
 
-        <article className="card card-pad">
-          <div className="card-head">
-            <h2 className="card-title">Trending coffee</h2>
-            <span className="faint chart-sub">30 days</span>
-          </div>
-          <ul className="drink-list">
-            {drinks.map((d, i) => (
-              <li key={d.name}>
-                <MiniSticker index={[0, 1, 2, 4, 3][i] ?? i} size={40} />
-                <div className="drink-meta">
-                  <div className="drink-row">
-                    <strong>{d.name}</strong>
-                    <span className="tabular">{d.count}</span>
-                  </div>
-                  <div className="drink-bar">
-                    <span style={{ width: `${(d.count / maxDrink) * 100}%` }} />
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </article>
       </section>
 
       <section className="dash-bottom">
@@ -174,6 +147,20 @@ export function Dashboard() {
               </tbody>
             </table>
           </div>
+          {allRecent.length === 0 && (
+            <div className="empty">
+              <Icon name="clock" />
+              <p>No stickers or rewards yet.</p>
+            </div>
+          )}
+          {allRecent.length > shown && (
+            <button className="btn btn-ghost btn-block load-more" onClick={() => setShown((n) => n + PAGE)}>
+              <Icon name="chevronDown" /> Load more
+              <span className="faint tabular no-caps">
+                {shown} of {allRecent.length}
+              </span>
+            </button>
+          )}
         </article>
 
         <article className="card card-pad nudge-card">
