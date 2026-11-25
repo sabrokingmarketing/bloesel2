@@ -61,6 +61,8 @@ export function Profile() {
     e.preventDefault();
     if (name.trim().length < 2) return setDetailsError('Please add your name');
     if (!validPhone(phone)) return setDetailsError('Enter a valid mobile number');
+    if (emailChanged && !email.trim()) return setDetailsError('Your card needs an email address, so you can reset your PIN');
+    if (emailChanged && !/^\S+@\S+\.\S+$/.test(email.trim())) return setDetailsError('That email looks off');
     if (needsPinForDetails && !/^\d{4}$/.test(detailsPin)) return setDetailsError('Enter your current PIN to change your number or email');
     setDetailsError(undefined);
     setBusy(true);
@@ -161,8 +163,8 @@ export function Profile() {
             <input id="p-phone" className="input" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" />
           </div>
           <div className="field">
-            <label htmlFor="p-email">Email (optional, to reset your PIN)</label>
-            <input id="p-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" autoComplete="email" />
+            <label htmlFor="p-email">Email (to reset your PIN)</label>
+            <input id="p-email" type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" autoComplete="email" />
           </div>
           {needsPinForDetails && (
             <PinField id="p-details-pin" label="Current PIN" value={detailsPin} onChange={setDetailsPin} hint="Needed to change your number or email." />

@@ -84,7 +84,8 @@ function toCampaign(r: Row): Campaign {
     id: String(r.id),
     name: String(r.name),
     kind: r.kind as Campaign['kind'],
-    url: r.kind === 'join' ? `/app/join?src=${r.id}` : String(r.target_url),
+    // Join codes open the landing page first; its button leads on to sign-up.
+    url: r.kind === 'join' ? `/?src=${r.id}` : String(r.target_url),
     placement: String(r.placement),
     scans: Number(r.scans),
     active: Boolean(r.active),
@@ -132,13 +133,8 @@ const phone = z
   .trim()
   .max(32)
   .refine((p) => phoneKey(p) !== null, 'Enter a valid mobile number');
-const email = z
-  .string()
-  .trim()
-  .max(254)
-  .email('That email looks off')
-  .optional()
-  .or(z.literal('').transform(() => undefined));
+/** Required when creating a card, so every member can reset a forgotten PIN by email. */
+const requiredEmail = z.string().trim().min(1, 'Enter your email address').max(254).email('That email looks off');
 const drink = z.string().trim().min(1).max(40).optional();
 const pin = z
   .string()
@@ -314,7 +310,7 @@ route('GET', '/api/config', async (_ctx, db) => json(toSettings(await loadSettin
 /* ---------- Customers ---------- */
 
 route('POST', '/api/join', async (ctx, db) => {
-  const input = await body(ctx, z.object({ name, phone, email, pin, marketingOptIn: z.boolean().optional() }));
+  const input = await body(ctx, z.object({ name, phone, email: requiredEmail, pin, marketingOptIn: z.boolean().optional() }));
   // Generous: everyone on the café's Wi-Fi shares one address. This only stops scripted mass sign-ups.
   if (await hitRateLimit(db, `join:${ctx.ip}`, 60, 3600)) throw tooMany('Too many sign-ups from this network. Try again later.');
   const key = phoneKey(input.phone)!;
@@ -332,7 +328,7 @@ route('POST', '/api/join', async (ctx, db) => {
       [row] = await q.query(
         `INSERT INTO customers (code, name, phone, phone_key, email, marketing_opt_in, pin_hash)
          VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (code) DO NOTHING RETURNING *`,
-        [memberCode(), input.name, input.phone, key, input.email ?? null, input.marketingOptIn ?? false, pinHash],
+        [memberCode(), input.name, input.phone, key, input.email, input.marketingOptIn ?? false, pinHash],
       );
     }
     if (!row) throw new Error('could not allocate a member code');
@@ -356,15 +352,15 @@ route('PATCH', '/api/me', async (ctx, db) => {
     z.object({
       name: name.optional(),
       phone: phone.optional(),
-      // Absent = leave as is; '' = remove; otherwise a new address.
-      email: z.union([z.literal(''), z.string().trim().max(254).email('That email looks off')]).optional(),
+      // Absent = leave as is; otherwise a new address. It can be changed but not removed.
+      email: requiredEmail.optional(),
       currentPin: z.string().max(8).optional(),
     }),
   );
   const key = input.phone ? phoneKey(input.phone) : null;
   const phoneChanging = !!key && key !== customer.phone_key;
   const oldEmail = (customer.email as string | null) ?? null;
-  const newEmail = input.email === undefined ? oldEmail : input.email || null;
+  const newEmail = input.email ?? oldEmail;
   const emailChanging = (newEmail ?? '').toLowerCase() !== (oldEmail ?? '').toLowerCase();
   // The phone number signs in and the email receives reset links: both need the current PIN.
   if (phoneChanging || emailChanging) await confirmCurrentPin(db, customer, input.currentPin);

@@ -46,7 +46,7 @@ The deployed app refuses to start without a real database, session secret and ad
 
 ### Security model
 
-- **Customers** choose a 4-digit PIN (scrypt-hashed; trivial PINs refused) and sign in with mobile number + PIN. Five wrong PINs lock that number for 15 minutes, and a wrong number gets the same reply as a wrong PIN.
+- **Customers** must give an email address when they create a card (so they can always reset a forgotten PIN); they can change it later in Profile but not remove it. They choose a 4-digit PIN (scrypt-hashed; trivial PINs refused) and sign in with mobile number + PIN. Five wrong PINs lock that number for 15 minutes, and a wrong number gets the same reply as a wrong PIN.
 - **Staying signed in:** each phone gets a random device token (only its SHA-256 is stored) in an HttpOnly, SameSite=Lax cookie that lasts 120 days after the last visit. Page scripts can't read it.
 - **Forgot PIN:** a single-use reset link valid for 30 minutes is emailed to the address on the card. The reply never says whether an address is on a card, the link is built from configuration (not the request's Host header), and completing a reset signs out every other phone.
 - **Personal data:** staff screens only ever receive masked email addresses; PIN and token hashes are never sent to any browser; emails, PINs and links are never logged.

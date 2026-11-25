@@ -175,7 +175,7 @@ export function Rewards() {
           </>
         )}
 
-        <section className="stat-trio rise rise-2" aria-label="Your stats">
+        <section className="stat-trio stat-duo rise rise-2" aria-label="Your stats">
           <div className="stat">
             <span className="stat-icon">
               <Icon name="bean" />
@@ -189,13 +189,6 @@ export function Rewards() {
             </span>
             <strong className="display tabular">{customer.rewardsRedeemed}</strong>
             <span>Free cups enjoyed</span>
-          </div>
-          <div className="stat">
-            <span className="stat-icon dark">
-              <Icon name="heart" />
-            </span>
-            <strong className="display stat-text">{customer.favourite ?? '—'}</strong>
-            <span>Your usual</span>
           </div>
         </section>
 

@@ -24,7 +24,8 @@ function readScannedCode() {
 
 /**
  * Opened by the printed counter QR (/app/stamp#c=CODE). Adds one sticker to
- * this phone's card. First-timers are sent to sign up, then brought back here.
+ * this phone's card. Signed-out visitors see the landing page first, then sign
+ * up or sign in, and are brought back here to collect the sticker.
  */
 export function CounterStamp() {
   const me = useMe();
@@ -61,8 +62,9 @@ export function CounterStamp() {
   }, [me.status, code, scan.id]);
 
   if (!code) return <Navigate to="/app" replace />;
-  // No card yet: sign up first; Join brings them back here with the code still pending.
-  if (me.status === 'none') return <Navigate to="/app/join?then=stamp" replace />;
+  // No card on this phone yet: show the landing page first. The code stays pending,
+  // so the landing button leads to sign-up / sign-in and then straight back here.
+  if (me.status === 'none') return <Navigate to="/" replace />;
 
   const max = me.data?.settings.stampsRequired ?? 10;
 

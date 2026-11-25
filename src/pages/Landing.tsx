@@ -3,11 +3,13 @@ import { CoffeeBreak } from '../components/CoffeeBreak';
 import { Icon } from '../components/Icon';
 import { Logo } from '../components/Logo';
 import { Sticker } from '../components/Sticker';
-import { useConfig } from '../data/store';
+import { getPendingCounterCode, useConfig } from '../data/store';
 
 /** Customer-facing landing page: one action, open my card. Staff get a quiet link top right. */
 export function Landing() {
   const n = useConfig()?.stampsRequired ?? 10;
+  // Set when they scanned the counter QR before signing in on this phone.
+  const collecting = !!getPendingCounterCode();
   return (
     <div className="landing-page">
       <main className="landing">
@@ -26,9 +28,14 @@ export function Landing() {
             <p className="landing-lede">
               Collect a sticker with every coffee. Fill your card with {n}, and your next cup is on us. No paper, no app store, just your phone.
             </p>
+            {collecting && (
+              <p className="landing-pending" role="status">
+                <Icon name="qr" /> Your sticker from the counter is waiting. Open your card to collect it.
+              </p>
+            )}
             <div className="landing-actions">
-              <Link to="/app" className="btn btn-primary btn-lg btn-cta">
-                Open my card
+              <Link to={collecting ? '/app/join' : '/app'} className="btn btn-primary btn-lg btn-cta">
+                {collecting ? 'Collect my sticker' : 'Open my card'}
                 <span className="btn-orb">
                   <Icon name="arrowRight" />
                 </span>

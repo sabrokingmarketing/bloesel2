@@ -36,7 +36,7 @@ let n = 0;
 async function join(extra: Record<string, unknown> = {}) {
   n++;
   const phone = `+27 82 000 ${String(1000 + n)}`;
-  const res = await call('POST', '/api/join', { body: { name: `Member ${n}`, phone, pin: PIN, ...extra }, ip: `10.1.0.${n}` });
+  const res = await call('POST', '/api/join', { body: { name: `Member ${n}`, phone, pin: PIN, email: `member${n}@example.com`, ...extra }, ip: `10.1.0.${n}` });
   expect(res.status).toBe(201);
   const token = cardCookie(res)!.value;
   return { token, phone, ...(res.data as { customer: { id: string; code: string; stamps: number; email?: string } }) };
@@ -77,8 +77,8 @@ describe('customer cards', () => {
   });
 
   it('will not let a phone number be used to take over an existing card', async () => {
-    await call('POST', '/api/join', { body: { name: 'Thandi', phone: '+27 82 555 0101', pin: PIN } });
-    const again = await call('POST', '/api/join', { body: { name: 'Someone else', phone: '082 555 0101', pin: '9137' }, ip: '10.2.2.2' });
+    await call('POST', '/api/join', { body: { name: 'Thandi', phone: '+27 82 555 0101', pin: PIN, email: 'thandi@example.com' } });
+    const again = await call('POST', '/api/join', { body: { name: 'Someone else', phone: '082 555 0101', pin: '9137', email: 'someone@example.com' }, ip: '10.2.2.2' });
     expect(again.status).toBe(409);
     expect(again.data.error.code).toBe('phone_taken');
     expect(cardCookie(again)).toBeUndefined();
@@ -89,9 +89,26 @@ describe('customer cards', () => {
     expect(bad.status).toBe(400);
   });
 
+  it('lets a member change their email but not remove it', async () => {
+    const a = await join({ email: 'first@example.com' });
+    expect((await call('PATCH', '/api/me', { token: a.token, body: { email: '', currentPin: PIN } })).status).toBe(400);
+    const changed = await call('PATCH', '/api/me', { token: a.token, body: { email: 'second@example.com', currentPin: PIN } });
+    expect(changed.status).toBe(200);
+  });
+
+  it('needs an email address to create a card', async () => {
+    const base = { name: 'No Email', phone: '+27 84 777 1234', pin: PIN };
+    for (const email of [undefined, '', '   ', 'not-an-email']) {
+      const res = await call('POST', '/api/join', { body: email === undefined ? base : { ...base, email }, ip: '10.4.4.4' });
+      expect(res.status).toBe(400);
+      expect(cardCookie(res)).toBeUndefined();
+    }
+    expect((await call('POST', '/api/join', { body: { ...base, email: 'has.email@example.com' }, ip: '10.4.4.4' })).status).toBe(201);
+  });
+
   it('rejects a profile phone number that belongs to another member', async () => {
     const a = await join();
-    await call('POST', '/api/join', { body: { name: 'Other', phone: '+27 71 444 0000', pin: PIN }, ip: '10.3.3.3' });
+    await call('POST', '/api/join', { body: { name: 'Other', phone: '+27 71 444 0000', pin: PIN, email: 'other@example.com' }, ip: '10.3.3.3' });
     const res = await call('PATCH', '/api/me', { token: a.token, body: { phone: '071 444 0000', currentPin: PIN } });
     expect(res.status).toBe(409);
   });
@@ -229,7 +246,7 @@ describe('printed QR codes', () => {
     const id = created.data.campaign.id;
     const scan = await handle(new Request(`http://test/q/${id}`));
     expect(scan.status).toBe(302);
-    expect(scan.headers.get('location')).toBe(`/app/join?src=${id}`);
+    expect(scan.headers.get('location')).toBe(`/?src=${id}`);
 
     await call('PATCH', `/api/admin/campaigns/${id}`, { cookie, body: { active: false } });
     const paused = await handle(new Request(`http://test/q/${id}`));
@@ -340,7 +357,7 @@ describe('counter QR (customer scans to collect a sticker)', () => {
 
 describe('PIN sign-in and the 120-day session', () => {
   it('needs a 4-digit PIN that is not trivially guessable to create a card', async () => {
-    const body = (pin?: string) => ({ name: 'Pin Test', phone: '+27 83 111 2233', ...(pin === undefined ? {} : { pin }) });
+    const body = (pin?: string) => ({ name: 'Pin Test', phone: '+27 83 111 2233', email: 'pin.test@example.com', ...(pin === undefined ? {} : { pin }) });
     expect((await call('POST', '/api/join', { body: body() })).status).toBe(400);
     for (const weak of ['1111', '1234', '9876', '0000', '12a4', '123']) {
       expect((await call('POST', '/api/join', { body: body(weak) })).status).toBe(400);
@@ -349,7 +366,7 @@ describe('PIN sign-in and the 120-day session', () => {
   });
 
   it('keeps the phone signed in for 120 days with a secure cookie, and never returns the token in the body', async () => {
-    const res = await call('POST', '/api/join', { body: { name: 'Cookie Test', phone: '+27 83 222 3344', pin: PIN } });
+    const res = await call('POST', '/api/join', { body: { name: 'Cookie Test', phone: '+27 83 222 3344', pin: PIN, email: 'cookie@example.com' } });
     const c = cardCookie(res)!;
     expect(c.raw).toContain('HttpOnly');
     expect(c.raw).toContain('SameSite=Lax');
