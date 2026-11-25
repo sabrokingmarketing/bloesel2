@@ -198,7 +198,7 @@ function signedIn(data: MeData) {
   return data.customer;
 }
 
-export async function joinProgramme(input: { name: string; phone: string; pin: string; email?: string; marketingOptIn?: boolean }) {
+export async function joinProgramme(input: { name: string; phone: string; pin: string; email: string; marketingOptIn?: boolean }) {
   return signedIn(await api<MeData>('POST', '/api/join', input));
 }
 

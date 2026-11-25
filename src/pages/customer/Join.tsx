@@ -60,7 +60,8 @@ export function Join() {
     const errs: Record<string, string> = {};
     if (name.trim().length < 2) errs.name = 'Tell us what to call you';
     if (!validPhone(phone)) errs.phone = 'Enter a valid mobile number';
-    if (email && !/^\S+@\S+\.\S+$/.test(email)) errs.email = 'That email looks off';
+    if (!email.trim()) errs.email = 'Enter your email address';
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = 'That email looks off';
     const pp = pinProblem(pin);
     if (pp) errs.pin = pp;
     setErrors(errs);
@@ -68,7 +69,7 @@ export function Join() {
 
     setBusy(true);
     try {
-      await joinProgramme({ name: name.trim(), phone: phone.trim(), pin, email: email.trim() || undefined, marketingOptIn: consent });
+      await joinProgramme({ name: name.trim(), phone: phone.trim(), pin, email: email.trim(), marketingOptIn: consent });
       afterSignIn('Your card is ready! Scan the QR by the till for your first sticker.');
     } catch (err) {
       const e = err as ApiError;
@@ -170,9 +171,9 @@ export function Join() {
                 <PinField id="j-pin" label="Choose a 4-digit PIN" value={pin} onChange={setPin} error={errors.pin} hint="You'll use it to sign in on another phone." isNew />
                 <div className="field">
                   <label htmlFor="j-email">
-                    Email <span className="faint">(optional, to reset your PIN)</span>
+                    Email <span className="faint">(to reset your PIN)</span>
                   </label>
-                  <input id="j-email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" aria-invalid={!!errors.email} />
+                  <input id="j-email" type="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" aria-invalid={!!errors.email} />
                   {errors.email && <span className="field-error">{errors.email}</span>}
                 </div>
                 <label className="check">
