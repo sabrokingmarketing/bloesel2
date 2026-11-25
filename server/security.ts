@@ -71,7 +71,14 @@ export function maskEmail(email: string | null | undefined) {
 /* ---------- Staff session cookie ---------- */
 
 export const STAFF_COOKIE = 'bk_staff';
-const STAFF_SESSION_HOURS = 12;
+const DAY_MS = 86_400_000;
+/** A till stays signed in while it's used at least once every 30 days. */
+export const STAFF_SESSION_IDLE_DAYS = 30;
+/** However often it's used, a till must re-enter the PIN 90 days after signing in. */
+export const STAFF_SESSION_MAX_DAYS = 90;
+/** Re-issue the cookie at most once a day, so polling doesn't send a new one every 10 seconds. */
+const STAFF_SESSION_RENEW_MS = DAY_MS;
+const STAFF_TOKEN_VERSION = 'v2';
 
 function sessionSecret() {
   const s = process.env.SESSION_SECRET;
@@ -83,29 +90,52 @@ function sessionSecret() {
 }
 
 function sign(payload: string) {
-  return createHmac('sha256', sessionSecret()).update(payload).digest('base64url');
+  // Domain-separated, so a signature made for anything else can never pass as a staff session.
+  return createHmac('sha256', sessionSecret()).update(`bk-staff-session:${payload}`).digest('base64url');
 }
+
+export type StaffSession = { issuedAt: number; expiresAt: number };
 
 /**
- * Session = expiry + version, signed. The version covers the PIN hash and a
- * session epoch, so changing the PIN or "sign out all tills" ends every session.
+ * Session = format version + sign-in time + expiry + PIN version, HMAC-signed.
+ * The PIN version covers the PIN hash and a session epoch, so changing the PIN
+ * or "sign out all tills" ends every session at once. The expiry slides forward
+ * with use (see renewStaffSession) but never past STAFF_SESSION_MAX_DAYS after sign-in.
  */
-export function issueStaffSession(pinHash: string, epoch = 0, now = Date.now()) {
-  const exp = now + STAFF_SESSION_HOURS * 3600_000;
-  const payload = `${exp}.${pinVersion(pinHash, epoch)}`;
-  return { value: `${payload}.${sign(payload)}`, maxAge: STAFF_SESSION_HOURS * 3600 };
+export function issueStaffSession(pinHash: string, epoch = 0, now = Date.now(), issuedAt = now) {
+  const expiresAt = Math.min(now + STAFF_SESSION_IDLE_DAYS * DAY_MS, issuedAt + STAFF_SESSION_MAX_DAYS * DAY_MS);
+  const payload = `${STAFF_TOKEN_VERSION}.${issuedAt}.${expiresAt}.${pinVersion(pinHash, epoch)}`;
+  return { value: `${payload}.${sign(payload)}`, maxAge: Math.max(0, Math.floor((expiresAt - now) / 1000)) };
 }
 
-export function verifyStaffSession(value: string | undefined, pinHash: string, epoch = 0, now = Date.now()) {
-  if (!value) return false;
+/** Returns the session when the cookie is genuine, current and matches today's PIN; otherwise null. */
+export function verifyStaffSession(value: string | undefined, pinHash: string, epoch = 0, now = Date.now()): StaffSession | null {
+  if (!value || value.length > 200) return null;
   const i = value.lastIndexOf('.');
-  if (i < 0) return false;
+  if (i < 0) return null;
   const payload = value.slice(0, i);
   const sig = Buffer.from(value.slice(i + 1));
   const want = Buffer.from(sign(payload));
-  if (sig.length !== want.length || !timingSafeEqual(sig, want)) return false;
-  const [exp, ver] = payload.split('.');
-  return Number(exp) > now && ver === pinVersion(pinHash, epoch);
+  if (sig.length !== want.length || !timingSafeEqual(sig, want)) return null;
+  const parts = payload.split('.');
+  if (parts.length !== 4 || parts[0] !== STAFF_TOKEN_VERSION) return null;
+  const issuedAt = Number(parts[1]);
+  const expiresAt = Number(parts[2]);
+  if (!Number.isSafeInteger(issuedAt) || !Number.isSafeInteger(expiresAt)) return null;
+  if (issuedAt > now + 60_000) return null; // allow a minute of clock skew between serverless instances
+  if (expiresAt <= now || expiresAt > issuedAt + STAFF_SESSION_MAX_DAYS * DAY_MS) return null;
+  if (parts[3] !== pinVersion(pinHash, epoch)) return null;
+  return { issuedAt, expiresAt };
+}
+
+/**
+ * Sliding expiry: once a day, a till that's in use gets a fresh 30 days
+ * (capped at 90 days from sign-in). Returns the new cookie, or null when no renewal is due.
+ */
+export function renewStaffSession(session: StaffSession, pinHash: string, epoch = 0, now = Date.now()) {
+  const fullExpiry = Math.min(now + STAFF_SESSION_IDLE_DAYS * DAY_MS, session.issuedAt + STAFF_SESSION_MAX_DAYS * DAY_MS);
+  if (fullExpiry - session.expiresAt < STAFF_SESSION_RENEW_MS) return null;
+  return issueStaffSession(pinHash, epoch, now, session.issuedAt);
 }
 
 function pinVersion(pinHash: string, epoch: number) {

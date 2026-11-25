@@ -52,7 +52,7 @@ The deployed app refuses to start without a real database, session secret and ad
 - **Personal data:** staff screens only ever receive masked email addresses; PIN and token hashes are never sent to any browser; emails, PINs and links are never logged.
 - **Headers:** a strict Content-Security-Policy, HSTS and frame blocking are set in `vercel.json` (`server/headers.ts`).
 - **Moving a card** uses a one-time link that expires after 15 minutes. The member makes one in **Profile → Move to a new phone**, or a barista makes one at the till (**Customers → Send card to a new phone**). Using the link signs every other phone out, so a lost phone stops working.
-- **Staff** sign in with the shop PIN (scrypt-hashed) and get a signed, HttpOnly, SameSite=Strict cookie for 12 hours. Five wrong PINs from one network locks it for 15 minutes. Changing the PIN signs out every other till.
+- **Staff** sign in with the shop PIN (scrypt-hashed) and get a signed, HttpOnly, SameSite=Strict cookie. A till stays signed in for 30 days after it was last used (renewed at most once a day), and must re-enter the PIN 90 days after signing in however often it's used. **Sign out all other tills** (Settings) ends every other session at once. Five wrong PINs from one network locks it for 15 minutes. Changing the PIN signs out every other till.
 - **Till actions** carry an idempotency key, and the card row is locked while it changes. A double tap or a retried request on a bad connection can't add two stickers, and two tills can't race.
 
 ### Counter sticker QR
