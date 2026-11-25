@@ -84,7 +84,8 @@ function toCampaign(r: Row): Campaign {
     id: String(r.id),
     name: String(r.name),
     kind: r.kind as Campaign['kind'],
-    url: r.kind === 'join' ? `/app/join?src=${r.id}` : String(r.target_url),
+    // Join codes open the landing page first; its button leads on to sign-up.
+    url: r.kind === 'join' ? `/?src=${r.id}` : String(r.target_url),
     placement: String(r.placement),
     scans: Number(r.scans),
     active: Boolean(r.active),

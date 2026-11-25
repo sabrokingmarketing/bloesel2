@@ -48,6 +48,26 @@
   color: var(--ink-soft);
   max-width: 44ch;
 }
+/* Shown on the landing page after a counter QR scan, before sign-in. */
+.landing-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: 44ch;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  background: var(--blush-50);
+  color: var(--ink);
+  font-size: var(--fs-14);
+  font-weight: 500;
+}
+.landing-pending svg {
+  flex: none;
+  color: var(--rose-600);
+  width: 18px;
+  height: 18px;
+}
 .landing-actions {
   display: flex;
   flex-wrap: wrap;

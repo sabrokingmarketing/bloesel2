@@ -229,7 +229,7 @@ describe('printed QR codes', () => {
     const id = created.data.campaign.id;
     const scan = await handle(new Request(`http://test/q/${id}`));
     expect(scan.status).toBe(302);
-    expect(scan.headers.get('location')).toBe(`/app/join?src=${id}`);
+    expect(scan.headers.get('location')).toBe(`/?src=${id}`);
 
     await call('PATCH', `/api/admin/campaigns/${id}`, { cookie, body: { active: false } });
     const paused = await handle(new Request(`http://test/q/${id}`));
