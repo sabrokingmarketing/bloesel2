@@ -29,6 +29,7 @@ import {
   hashToken,
   hitRateLimit,
   issueStaffSession,
+  renewStaffSession,
   memberCode,
   newCounterCode,
   safeEqual,
@@ -147,9 +148,19 @@ const idempotencyKey = z.string().trim().min(8).max(100);
 
 /* ======================= Auth ======================= */
 
+/** Checks the staff cookie and, at most once a day, slides its 30-day expiry forward. */
+function staffSession(ctx: Ctx, s: SettingsRow) {
+  const epoch = Number(s.staff_session_epoch);
+  const session = verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash, epoch);
+  if (!session) return false;
+  const renewed = renewStaffSession(session, s.admin_pin_hash, epoch);
+  if (renewed) ctx.setHeaders.append('set-cookie', cookie(STAFF_COOKIE, renewed.value, renewed.maxAge));
+  return true;
+}
+
 async function requireStaff(ctx: Ctx, q: Queryable) {
   const s = await loadSettings(q);
-  if (!verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash, Number(s.staff_session_epoch))) throw unauthorized('Staff sign-in required');
+  if (!staffSession(ctx, s)) throw unauthorized('Staff sign-in required');
   return s;
 }
 
@@ -627,7 +638,7 @@ route('POST', '/api/admin/logout-all', async (ctx, db) => {
 
 route('GET', '/api/admin/session', async (ctx, db) => {
   const s = await loadSettings(db);
-  return json({ authed: verifyStaffSession(getCookie(ctx.req, STAFF_COOKIE), s.admin_pin_hash, Number(s.staff_session_epoch)) });
+  return json({ authed: staffSession(ctx, s) });
 });
 
 /** Everything the staff portal shows. Sized for a single café; paginate if it grows past these caps. */

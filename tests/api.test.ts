@@ -579,6 +579,54 @@ describe('protecting a card once someone is signed in', () => {
 });
 
 describe('staff sign-in hardening', () => {
+  it('keeps a till signed in for 30 days, slides with use, and caps at 90 days', async () => {
+    const { issueStaffSession, verifyStaffSession, renewStaffSession } = await import('../server/security');
+    const DAY = 86_400_000;
+    const t0 = Date.UTC(2026, 0, 1);
+    const s = issueStaffSession('hash', 0, t0);
+    expect(s.maxAge).toBe(30 * 86_400);
+    expect(verifyStaffSession(s.value, 'hash', 0, t0 + 29 * DAY)).not.toBeNull();
+    expect(verifyStaffSession(s.value, 'hash', 0, t0 + 30 * DAY + 1)).toBeNull();
+    // Used within the first day: no new cookie needed yet.
+    expect(renewStaffSession(verifyStaffSession(s.value, 'hash', 0, t0 + 3_600_000)!, 'hash', 0, t0 + 3_600_000)).toBeNull();
+    // Keep using it every 20 days: it stays signed in, until 90 days after sign-in.
+    let cur = s.value;
+    for (let day = 20; day < 90; day += 20) {
+      const sess = verifyStaffSession(cur, 'hash', 0, t0 + day * DAY)!;
+      expect(sess).not.toBeNull();
+      // Near the 90-day cap there is nothing left to extend, so no new cookie is issued.
+      cur = renewStaffSession(sess, 'hash', 0, t0 + day * DAY)?.value ?? cur;
+    }
+    expect(verifyStaffSession(cur, 'hash', 0, t0 + 89 * DAY)).not.toBeNull();
+    expect(verifyStaffSession(cur, 'hash', 0, t0 + 90 * DAY + 1)).toBeNull();
+    // A changed PIN or "sign out all tills" ends it immediately.
+    expect(verifyStaffSession(s.value, 'other-hash', 0, t0)).toBeNull();
+    expect(verifyStaffSession(s.value, 'hash', 1, t0)).toBeNull();
+  });
+
+  it('rejects tampered, forged and old-format staff cookies', async () => {
+    const { issueStaffSession, verifyStaffSession } = await import('../server/security');
+    const now = Date.now();
+    const s = issueStaffSession('hash', 0, now);
+    const [v, iat, , ver, sig] = s.value.split('.');
+    // Pushing the expiry out invalidates the signature.
+    expect(verifyStaffSession([v, iat, now + 400 * 86_400_000, ver, sig].join('.'), 'hash', 0, now)).toBeNull();
+    expect(verifyStaffSession(s.value.slice(0, -2) + 'xx', 'hash', 0, now)).toBeNull();
+    expect(verifyStaffSession(`${now + 3_600_000}.${ver}.${sig}`, 'hash', 0, now)).toBeNull();
+    expect(verifyStaffSession('', 'hash', 0, now)).toBeNull();
+    expect(verifyStaffSession('a'.repeat(5000), 'hash', 0, now)).toBeNull();
+  });
+
+  it('sets a 30-day staff cookie on sign-in', async () => {
+    const res = await call('POST', '/api/admin/login', { body: { pin: '1234' }, ip: '10.9.9.8' });
+    const raw = res.headers.get('set-cookie')!;
+    expect(raw).toContain(`Max-Age=${30 * 86_400}`);
+    expect(raw).toContain('HttpOnly');
+    expect(raw).toContain('SameSite=Strict');
+    const cookie = raw.split(';')[0]!;
+    expect((await call('GET', '/api/admin/session', { cookie })).data).toEqual({ authed: true });
+  });
+
   it('parallel staff PIN guesses cannot get past the limit', async () => {
     const results = await Promise.all(Array.from({ length: 25 }, (_, i) => call('POST', '/api/admin/login', { body: { pin: String(100000 + i) }, ip: '10.20.0.1' })));
     expect(results.filter((r) => r.status === 401).length).toBeLessThanOrEqual(5);
