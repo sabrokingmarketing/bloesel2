@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Icon } from '../../components/Icon';
 import { MiniSticker } from '../../components/Sticker';
 import type { Activity } from '../../data/types';
@@ -16,11 +17,16 @@ function label(a: Activity) {
   }
 }
 
+/** Visits shown at first, and added by each tap of Load more. */
+const PAGE = 10;
+
 export function History() {
   const { activity: items } = useCustomerCtx();
+  const [shown, setShown] = useState(PAGE);
+  const visible = items.slice(0, shown);
 
   const groups = new Map<string, Activity[]>();
-  for (const a of items) {
+  for (const a of visible) {
     const k = new Date(a.at).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k)!.push(a);
@@ -69,6 +75,15 @@ export function History() {
               </ul>
             </section>
           ))}
+
+          {items.length > shown && (
+            <button className="btn btn-ghost btn-block load-more timeline-more" onClick={() => setShown((n) => n + PAGE)}>
+              <Icon name="chevronDown" /> Load more
+              <span className="faint tabular no-caps">
+                {shown} of {items.length}
+              </span>
+            </button>
+          )}
         </div>
       )}
     </div>

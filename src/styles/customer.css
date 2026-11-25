@@ -616,6 +616,10 @@
   gap: var(--s-6);
   max-width: 720px;
 }
+/* Load more under the visits: the timeline's gap already spaces it. */
+.timeline .timeline-more {
+  margin-top: 0;
+}
 .timeline-group {
   display: grid;
   gap: var(--s-3);
